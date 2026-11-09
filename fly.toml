@@ -1,6 +1,5 @@
 app = 'duit'
 primary_region = 'sin'
-swap_size_mb = 512
 
 [[mounts]]
   source = 'data'
@@ -9,7 +8,7 @@ swap_size_mb = 512
 [http_service]
   internal_port = 3000
   force_https = true
-  auto_stop_machines = 'stop'
+  auto_stop_machines = 'suspend'
   auto_start_machines = true
 
   [[http_service.checks]]
