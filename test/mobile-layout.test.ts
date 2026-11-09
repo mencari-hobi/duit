@@ -38,3 +38,16 @@ test(
 		await expectWholeOnScreen(page, 'Log out');
 	}
 );
+
+test(
+	'the add page fits a 360 px wide screen and shows the whole "Add entry" button',
+	{ meta: { scenario: 'S41' } },
+	async () => {
+		const { cookie } = await registered();
+
+		const page = await openPage('/add', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+		await expectWholeOnScreen(page, 'Add entry');
+	}
+);

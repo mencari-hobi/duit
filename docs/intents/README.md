@@ -17,3 +17,15 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I4: The default currency comes from a standard list of currency codes and starts as IDR
 - Why: The user wants a standard source for currencies over free text, and keeps their money in rupiah
 - Serves: F8
+
+## Intent I5: Income, expense, and asset entries give the dashboard charts real data
+- Why: The user chose records first, since the chart layout on a narrow phone is undecided
+- Serves: F10, F11
+
+## Intent I6: A category reads the same however it was typed
+- Why: The user wants categories stored in lowercase and shown capitalized, so "Grocery" and "grocery" are one category
+- Serves: R24
+
+## Intent I7: Every date reads YYYY/MM/DD, whatever the device's locale
+- Why: The user calls YYYY/MM/DD the most important date standard for the app
+- Serves: F12

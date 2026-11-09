@@ -6,6 +6,8 @@ const DEFAULTS: Settings = { currency: 'IDR', startDay: 1 };
 
 const CURRENCIES = new Set(Intl.supportedValuesOf('currency'));
 
+export const isCurrency = (code: string) => CURRENCIES.has(code);
+
 export function readSettings(db: Db, userId: number): Settings {
 	const row = db
 		.prepare('SELECT currency, start_day AS startDay FROM settings WHERE user_id = ?')
@@ -18,7 +20,7 @@ function reportingStartDay(raw: string) {
 }
 
 export function saveSettings(db: Db, userId: number, form: { currency: string; startDay: string }) {
-	if (!CURRENCIES.has(form.currency)) return { message: 'Pick a currency from the list.' };
+	if (!isCurrency(form.currency)) return { message: 'Pick a currency from the list.' };
 	db.prepare(
 		`INSERT INTO settings (user_id, currency, start_day) VALUES (?, ?, ?)
 		ON CONFLICT (user_id) DO UPDATE SET currency = excluded.currency, start_day = excluded.start_day`
