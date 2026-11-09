@@ -39,7 +39,7 @@ export default async function setup(project: TestProject) {
 	const databasePath = join(dir, 'duit.db');
 	const port = await freePort();
 	const server = spawn('node', ['build'], {
-		env: { ...process.env, PORT: String(port), DATABASE_PATH: databasePath },
+		env: { ...process.env, PORT: String(port), PROTOCOL_HEADER: 'x-forwarded-proto', DATABASE_PATH: databasePath },
 		stdio: 'inherit'
 	});
 	const baseUrl = `http://localhost:${port}`;

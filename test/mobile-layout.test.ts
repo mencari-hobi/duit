@@ -1,32 +1,9 @@
-import { chromium, type Browser, type Page } from 'playwright';
-import { afterAll, beforeAll, expect, inject, test } from 'vitest';
+import type { Page } from 'playwright';
+import { expect, test } from 'vitest';
 import { registered } from './app';
+import { openPage } from './browser';
 
-const baseUrl = inject('baseUrl');
 const phoneWidth = 360;
-
-let browser: Browser;
-
-beforeAll(async () => {
-	browser = await chromium.launch();
-});
-
-afterAll(async () => {
-	await browser.close();
-});
-
-async function openOnPhone(path: string, cookie = '') {
-	const context = await browser.newContext({ viewport: { width: phoneWidth, height: 640 } });
-	if (cookie) {
-		const split = cookie.indexOf('=');
-		await context.addCookies([
-			{ name: cookie.slice(0, split), value: cookie.slice(split + 1), url: baseUrl }
-		]);
-	}
-	const page = await context.newPage();
-	await page.goto(`${baseUrl}${path}`);
-	return page;
-}
 
 function pageWidth(page: Page) {
 	return page.evaluate(() => document.documentElement.scrollWidth);
@@ -42,7 +19,7 @@ test(
 	'the login page fits a 360 px wide screen and shows the whole "Log in" button',
 	{ meta: { scenario: 'S17' } },
 	async () => {
-		const page = await openOnPhone('/login');
+		const page = await openPage('/login', '', phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Log in');
@@ -55,7 +32,7 @@ test(
 	async () => {
 		const { cookie } = await registered();
 
-		const page = await openOnPhone('/', cookie);
+		const page = await openPage('/', cookie, phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Log out');

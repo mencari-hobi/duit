@@ -8,4 +8,12 @@ Every intent behind the work of the project, in the order the definitions record
 
 ## Intent I2: Every screen of the finance app works on a phone
 - Why: The user calls mobile-friendly a must for the app and for the tables and dashboard to come
-- Serves: F6
+- Serves: F6, R14
+
+## Intent I3: The sidebar has the app's menu and the settings every report reads
+- Why: The user's mockup of duit puts the menu and the report settings in a sidebar
+- Serves: F7, F8, F9
+
+## Intent I4: The default currency comes from a standard list of currency codes and starts as IDR
+- Why: The user wants a standard source for currencies over free text, and keeps their money in rupiah
+- Serves: F8

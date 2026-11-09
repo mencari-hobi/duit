@@ -20,6 +20,11 @@ export function openDatabase(path: string): Db {
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			created_at INTEGER NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS settings (
+			user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+			currency TEXT NOT NULL,
+			start_day INTEGER NOT NULL
+		);
 	`);
 	return db;
 }

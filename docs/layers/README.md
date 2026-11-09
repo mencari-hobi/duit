@@ -24,3 +24,12 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F6
 - S18: screen, server, auth, db
+
+## F7
+- S20: screen, server, auth, db
+
+## F8
+- S25: screen, server, auth, db
+
+## F9
+- S29: screen, server, auth, db
