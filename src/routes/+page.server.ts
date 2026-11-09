@@ -1,10 +1,15 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { database } from '#lib/server/db.ts';
 import { endSession, signedInUser } from '#lib/server/session.ts';
+import { loadDashboard } from '#lib/server/dashboard.ts';
 import { saveSettings } from '#lib/server/settings.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = ({ locals }) => ({ user: signedInUser(locals) });
+export const load: PageServerLoad = ({ locals, url }) => {
+	const user = signedInUser(locals);
+	const range = (name: string) => url.searchParams.get(name) ?? '';
+	return { user, dashboard: loadDashboard(database(), user.id, range('from'), range('to')) };
+};
 
 export const actions: Actions = {
 	logout: ({ cookies }) => {

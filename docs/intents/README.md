@@ -29,3 +29,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I7: Every date reads YYYY/MM/DD, whatever the device's locale
 - Why: The user calls YYYY/MM/DD the most important date standard for the app
 - Serves: F12
+
+## Intent I8: The dashboard reads well on a phone held upright, however many months it shows
+- Why: The user is unsure how to arrange the charts, and fears a wide chart squeezed onto a narrow portrait screen
+- Serves: F13, F14, F15, S86

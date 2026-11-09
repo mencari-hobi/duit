@@ -1,6 +1,6 @@
 import type { Page } from 'playwright';
 import { expect, test } from 'vitest';
-import { registered } from './app';
+import { post, registered } from './app';
 import { openPage } from './browser';
 
 const phoneWidth = 360;
@@ -49,5 +49,30 @@ test(
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Add entry');
+	}
+);
+
+test(
+	'the dashboard with a year of entries fits a 360 px wide screen, and every chart fits its card',
+	{ meta: { scenario: 'S86' } },
+	async () => {
+		const { cookie } = await registered();
+		for (let month = 1; month <= 12; month++) {
+			const date = `2026/${String(month).padStart(2, '0')}/05`;
+			await post('/add', { type: 'income', date, amount: '9.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+			await post('/add', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
+		}
+
+		const page = await openPage('/', cookie, phoneWidth);
+		await page.locator('[data-chart] svg').first().waitFor();
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+		const overflowing = await page.evaluate(() =>
+			[...document.querySelectorAll<HTMLElement>('[data-chart]')]
+				.filter((chart) => chart.offsetParent !== null)
+				.filter((chart) => chart.scrollWidth > chart.clientWidth || chart.getBoundingClientRect().right > 360)
+				.map((chart) => chart.dataset.chart)
+		);
+		expect(overflowing).toEqual([]);
 	}
 );
