@@ -2,7 +2,7 @@
 
 Every layer of the product with its files, then under each feature code its chains: the fewest scenarios whose layers together reach every layer its scenarios reach. A chain scenario takes a feature test.
 
-- screen: src/routes/**/+page.svelte
+- screen: src/routes/**/+page.svelte, src/routes/**/+layout.svelte, src/lib/**/*.svelte, src/app.css
 - server: src/routes/**/+page.server.ts, src/routes/**/+server.ts, src/hooks.server.ts
 - auth: src/lib/server/auth.ts
 - db: src/lib/server/db.ts
@@ -21,3 +21,6 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F5
 - S16: server, db
+
+## F6
+- S18: screen, server, auth, db

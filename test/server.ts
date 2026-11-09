@@ -34,7 +34,7 @@ async function waitFor(url: string) {
 }
 
 export default async function setup(project: TestProject) {
-	execFileSync('npx', ['vite', 'build'], { stdio: 'ignore' });
+	execFileSync('pnpm', ['exec', 'vite', 'build'], { stdio: 'ignore' });
 	const dir = mkdtempSync(join(tmpdir(), 'duit-'));
 	const databasePath = join(dir, 'duit.db');
 	const port = await freePort();

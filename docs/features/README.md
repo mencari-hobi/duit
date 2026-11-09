@@ -12,6 +12,11 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R2: The session cookie stays out of reach of page scripts and cross-site requests
   - Scenario S4: The session cookie set on login has `HttpOnly` and `SameSite=Lax`
 
+### Feature F6: Mobile layout
+- Rule R11: Every page fits the width of a 360 px phone screen
+  - Scenario S17: On a 360 px wide screen, `/login` fits the screen width and shows the whole "Log in" button
+  - Scenario S18: On a 360 px wide screen, `/` for a signed-in user fits the screen width and shows the whole "Log out" button (happy path)
+
 ## Area A2: App › Register
 
 ### Feature F2: Registration
