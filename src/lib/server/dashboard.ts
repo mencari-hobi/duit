@@ -23,7 +23,7 @@ type Holding = {
 	term: string | null;
 };
 
-const classes = ['Cash', 'Investments', 'Property', 'Other'];
+const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other'];
 export const expenseTypes = [
 	'Fixed - Essential',
 	'Non-fixed - Essential',

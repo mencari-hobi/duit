@@ -282,6 +282,27 @@ test('a liability opens for editing with its term, and with the source and acqui
 	});
 });
 
+test(
+	'a goldbar opens for editing with its purchase value as the amount, its weight, and its price per gram',
+	{ meta: { scenario: 'S139' } },
+	() => {
+		addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
+		const [record] = listRecords(db, alice);
+
+		expect(editableRecord(db, alice, record.id)).toEqual(
+			expect.objectContaining({ amount: '3.000.000', cls: 'Goldbar', weight: '2,5', price: '1.500.000', acquisition: '' })
+		);
+	}
+);
+
+test('a goldbar lists with its weight and price per gram', () => {
+	addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
+
+	expect(label(listRecords(db, alice)[0])).toBe(
+		'Antam (Goldbar) · funded by Salary · 2,5 g × 1.500.000 · cost 3.000.000'
+	);
+});
+
 test('an income opens for editing without an expense type or owner', () => {
 	addEntry(db, alice, income());
 	const [record] = listRecords(db, alice);

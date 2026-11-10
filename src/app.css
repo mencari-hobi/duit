@@ -33,6 +33,7 @@
 	--chart-3: var(--out);
 	--chart-4: light-dark(#a8741a, #e3b25c);
 	--chart-5: light-dark(#5b4a8a, #a99be0);
+	--chart-6: light-dark(#2f5f9e, #7fa8e0);
 }
 
 @theme inline {
@@ -69,6 +70,7 @@
 	--color-chart-3: var(--chart-3);
 	--color-chart-4: var(--chart-4);
 	--color-chart-5: var(--chart-5);
+	--color-chart-6: var(--chart-6);
 }
 
 @layer base {

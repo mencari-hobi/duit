@@ -19,6 +19,8 @@ export type Record = {
 	source?: string | null;
 	term?: string | null;
 	acquisition?: number | null;
+	weight?: number | null;
+	price?: number | null;
 };
 
 export const money = (n: number) => group(String(n).replace('.', ','));
@@ -28,6 +30,7 @@ export const label = (record: Record) =>
 		? [
 				`${record.name} (${record.cls})`,
 				record.source && `funded by ${record.source}`,
+				record.weight != null && record.price != null && `${money(record.weight)} g × ${money(record.price)}`,
 				record.acquisition != null && `cost ${money(record.acquisition)}`
 			]
 				.filter(Boolean)

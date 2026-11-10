@@ -8,7 +8,7 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
-	import { regroup, sizeOf } from '#lib/amount.ts';
+	import { group, parseAmount, regroup, sizeOf } from '#lib/amount.ts';
 	import { capitalize, sale } from '#lib/category.ts';
 	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
@@ -35,7 +35,7 @@
 	};
 	const expenseTypes = ['Fixed - Essential', 'Non-fixed - Essential', 'Fixed - Non-essential', 'Non-fixed - Non-essential'];
 	const owners = ['Personal', 'Spouse', 'Children', 'Family', 'Extended Family'];
-	const classes = ['Cash', 'Investments', 'Property', 'Other', 'Liability'];
+	const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other', 'Liability'];
 	const sources = ['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Debt'];
 	const terms = ['Short term', 'Long term'];
 	const types: [Kind, string][] = [
@@ -56,6 +56,14 @@
 	let type = $state((sent?.type ?? 'income') as Kind);
 	let cls = $state(sent?.cls ?? 'Cash');
 	const liability = $derived(type === 'asset' && cls === 'Liability');
+	const gold = $derived(type === 'asset' && cls === 'Goldbar');
+	let weight = $state(sent?.weight ?? '');
+	let price = $state(sent?.price ?? '');
+	const market = $derived.by(() => {
+		const grams = parseAmount(weight);
+		const perGram = parseAmount(price);
+		return grams === null || perGram === null ? null : group(String(Math.round(grams * perGram)));
+	});
 	const sign = $derived(type === 'expense' ? '−' : '+');
 	const signColor = $derived(type === 'income' ? 'text-in' : type === 'expense' ? 'text-out' : 'text-chart-5');
 
@@ -63,7 +71,6 @@
 		type === 'asset' ? [] : [...new Set([...defaults[type], ...data.categories[type]])]
 	);
 	let category = $derived((kept.type === type && kept.category) || list[0]);
-	const selling = $derived(type === 'income' && category === sale);
 	const held = $derived(
 		[...new Set([...data.held, ...(editing?.asset ? [editing.asset] : [])])].sort()
 	);
@@ -139,7 +146,7 @@
 	</div>
 
 	<div class="flex flex-col gap-1.5">
-		<Label for="amount" class="text-muted-foreground">{type === 'asset' ? 'Current value' : 'Amount'}</Label>
+		<Label for="amount" class="text-muted-foreground">{gold ? 'Purchase value (total cost)' : type === 'asset' ? 'Current value' : 'Amount'}</Label>
 		<div
 			class={[
 				'flex items-baseline gap-2 border-b-2 pb-1 focus-within:border-ring',
@@ -267,20 +274,52 @@
 				{@render choice('term', 'term', 'Liability term', terms, kept.term ?? 'Long term')}
 			{:else}
 				{@render choice('source', 'source', 'Source of fund', sources, kept.source)}
-				<div class="flex flex-col gap-1.5 md:col-span-2">
-					<Label for="acquisition" class="leading-snug">
-						Acquisition value (total cost) – blank = keep previous
-					</Label>
-					<Input
-						id="acquisition"
-						name="acquisition"
-						inputmode="decimal"
-						autocomplete="off"
-						value={kept.acquisition ?? ''}
-						oninput={(event) => regroup(event.currentTarget)}
-						class={field}
-					/>
-				</div>
+				{#if gold}
+					<div class="flex flex-col gap-1.5">
+						<Label for="weight">Weight (grams)</Label>
+						<Input
+							id="weight"
+							name="weight"
+							inputmode="decimal"
+							autocomplete="off"
+							value={weight}
+							oninput={(event) => (weight = regroup(event.currentTarget))}
+							{...flagged('weight')}
+							class={field}
+						/>
+					</div>
+					<div class="flex flex-col gap-1.5">
+						<Label for="price">Market price per gram</Label>
+						<Input
+							id="price"
+							name="price"
+							inputmode="decimal"
+							autocomplete="off"
+							value={price}
+							oninput={(event) => (price = regroup(event.currentTarget))}
+							{...flagged('price')}
+							class={field}
+						/>
+					</div>
+					<p class="text-muted-foreground md:col-span-2">
+						Market value: <span class="tabular-nums text-foreground">{market ?? '–'}</span>
+					</p>
+				{:else}
+					<div class="flex flex-col gap-1.5 md:col-span-2">
+						<Label for="acquisition" class="leading-snug">
+							Acquisition value (total cost) – blank = keep previous
+						</Label>
+						<Input
+							id="acquisition"
+							name="acquisition"
+							inputmode="decimal"
+							autocomplete="off"
+							value={kept.acquisition ?? ''}
+							oninput={(event) => regroup(event.currentTarget)}
+							class={field}
+						/>
+					</div>
+				{/if}
 			{/if}
 		{:else}
 			<div class="flex flex-col gap-1.5">
@@ -326,7 +365,7 @@
 					</Popover.Content>
 				</Popover.Root>
 			</div>
-			{#if selling}
+			{#if type === 'income' && category === sale}
 				<div class="flex flex-col gap-1.5">
 					<Label for="asset">Asset sold</Label>
 					<select id="asset" name="asset" class={select} {...flagged('asset')}>

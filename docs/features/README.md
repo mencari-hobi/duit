@@ -106,6 +106,10 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S49: Adding an asset with a blank name shows "Please enter a name for the asset." and stores nothing
   - Scenario S55: Adding the asset "Dollar savings" with "USD" picked beside the amount stores "USD" as the asset's currency
   - Scenario S59: Adding the asset "Savings account" with the note "BCA" stores the note "BCA"
+- Rule R59: A goldbar takes its purchase value as the amount, and its value is its weight times the market price per gram
+  - Scenario S137: Adding the goldbar "Antam", 2,5 grams at 1.500.000 per gram and bought for 3.000.000, stores a value of 3.750.000 and an acquisition value of 3.000.000
+  - Scenario S138: Adding a goldbar without a weight shows "Please enter the weight in grams (numbers only)." and stores no asset
+  - Scenario S139: Editing that goldbar fills the purchase value 3.000.000, the weight 2,5, and the market price per gram 1.500.000
 - Rule R26: A blank acquisition value falls back to the asset's last acquisition value, or to its value on a first entry
   - Scenario S50: Adding a first "Savings account" with a blank acquisition value stores its value as the acquisition value
   - Scenario S51: Adding "Savings account" again with a blank acquisition value stores the acquisition value of its last entry
@@ -157,6 +161,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S134: Three reporting months without a sale leave out the memo line
 - Rule R49: The asset section splits assets into liquid and non-liquid, then compares them with their acquisition value and the liabilities
   - Scenario S111: A "Cash" asset of 6.000.000 and a "Property" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Total Assets (market value)" 8,00
+  - Scenario S135: A "Cash" asset of 6.000.000 and a "Goldbar" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Goldbar" 2,00
   - Scenario S112: An asset worth 12.000.000 with an acquisition value of 10.000.000 reads "Acquisition value" 10,00, "Capital gain (market − acquisition)" 2,00, and "Capital gain % of acquisition value" 20.0%
   - Scenario S113: Liabilities of 1.000.000 "Short term" and 2.000.000 "Long term" against assets of 8.000.000 read "Liabilities" 3,00, split by term, and "Net Worth (assets − liabilities)" 5,00
 - Rule R50: The ratios section shows nine ratios of the month
@@ -230,6 +235,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S80: Assets of 15.000.000 and liabilities of 3.000.000 in 2026/11 give liabilities 3.000.000, equity 12.000.000, and net worth 12.000.000 for that month
 - Rule R39: Asset movement by type stacks each month's asset value by class, each labeled with its share of the assets
   - Scenario S81: A "Cash" asset of 6.000.000 and a "Property" asset of 2.000.000 in 2026/11 stack as 75% and 25%
+  - Scenario S136: A "Cash" asset of 6.000.000 and a "Goldbar" asset of 2.000.000 in 2026/11 stack as 75% and 25%
 - Rule R40: The assets and liabilities table lists each asset with its latest value and its change from the update before
   - Scenario S82: "Savings account" updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000
 

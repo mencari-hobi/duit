@@ -23,7 +23,7 @@
 	const money = (n: number) => (n < 0 ? '−' : '') + group(String(Math.abs(Math.round(n))));
 	const signed = (n: number) => (n > 0 ? '+' : '') + money(n);
 
-	const classes: [string, string][] = [['Cash', 'var(--chart-1)'], ['Investments', 'var(--chart-2)'], ['Property', 'var(--chart-4)'], ['Other', 'var(--chart-5)']];
+	const classes: [string, string][] = [['Cash', 'var(--chart-1)'], ['Investments', 'var(--chart-2)'], ['Goldbar', 'var(--chart-6)'], ['Property', 'var(--chart-4)'], ['Other', 'var(--chart-5)']];
 	const types: [string, string][] = [
 		['Fixed - Essential', 'var(--chart-3)'],
 		['Non-fixed - Essential', 'var(--chart-4)'],
