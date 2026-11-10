@@ -12,7 +12,7 @@ type Bag = { [key: string]: number };
 
 type Monthly<T> = T & { month: string };
 
-const nonLiquid = ['Investments', 'Other', 'Property'];
+const nonLiquid = ['Goldbar', 'Investments', 'Other', 'Property'];
 const classes = ['Cash', ...nonLiquid];
 const installmentCategories = ['mortgage', 'car installment', 'debt payment', 'other installment'];
 
@@ -39,9 +39,9 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 	let mortgage = 0;
 	let sales = 0;
 	for (const row of flows.filter((row) => row.month === month)) {
-		if (row.kind === 'income' && row.category === sale) sales += row.amount;
-		else if (row.kind === 'income') add(income, row.category, row.amount);
 		if (row.kind === 'income') {
+			if (row.category === sale) sales += row.amount;
+			else add(income, row.category, row.amount);
 			continue;
 		}
 		const type = row.expenseType ?? '';

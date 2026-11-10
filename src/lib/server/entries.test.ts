@@ -172,6 +172,38 @@ test(
 );
 
 test(
+	'adding a goldbar of 2,5 grams at 1.500.000 per gram bought for 3.000.000 stores a value of 3.750.000 and an acquisition of 3.000.000',
+	{ meta: { scenario: 'S137' } },
+	() => {
+		addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
+
+		expect(assetRows()).toEqual([
+			expect.objectContaining({ class: 'Goldbar', value: 3750000, acquisition: 3000000, weight: 2.5, price: 1500000 })
+		]);
+	}
+);
+
+test(
+	'adding a goldbar without a weight returns the weight message and stores no asset',
+	{ meta: { scenario: 'S138' } },
+	() => {
+		expect(addEntry(db, alice, asset({ cls: 'Goldbar', weight: '', price: '1.500.000' }))).toEqual({
+			message: 'Please enter the weight in grams (numbers only).',
+			field: 'weight'
+		});
+		expect(assetRows()).toEqual([]);
+	}
+);
+
+test('adding a goldbar without a price per gram returns the price message and stores no asset', () => {
+	expect(addEntry(db, alice, asset({ cls: 'Goldbar', weight: '10', price: '' }))).toEqual({
+		message: 'Please enter the market price per gram (numbers only).',
+		field: 'price'
+	});
+	expect(assetRows()).toEqual([]);
+});
+
+test(
 	'adding an asset with a blank name returns the name message and stores no asset',
 	{ meta: { scenario: 'S49' } },
 	() => {

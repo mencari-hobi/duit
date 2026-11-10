@@ -234,6 +234,20 @@ test(
 );
 
 test(
+	'a cash asset of 6.000.000 and a goldbar asset of 2.000.000 stack as 75% and 25%',
+	{ meta: { scenario: 'S136' } },
+	() => {
+		asset('2026/11/01', 'Savings account', '6.000.000');
+		asset('2026/11/01', 'Antam 10 g', '2.000.000', { cls: 'Goldbar', weight: '10', price: '200.000' });
+
+		const { byClass } = board().months[0];
+
+		expect(byClass.Cash.share).toBe(75);
+		expect(byClass.Goldbar.share).toBe(25);
+	}
+);
+
+test(
 	'savings account updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000',
 	{ meta: { scenario: 'S82' } },
 	() => {

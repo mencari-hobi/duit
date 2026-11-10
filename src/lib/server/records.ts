@@ -13,7 +13,7 @@ export function listRecords(db: Db, userId: number): Record[] {
 		.all(userId) as Row[];
 	const holdings = db
 		.prepare(
-			`SELECT id, 'asset' AS kind, date, value AS amount, currency, note, name, class AS cls, source, term, acquisition
+			`SELECT id, 'asset' AS kind, date, value AS amount, currency, note, name, class AS cls, source, term, acquisition, weight, price
 			FROM assets WHERE user_id = ?`
 		)
 		.all(userId) as Row[];
@@ -39,13 +39,15 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 		currency: record.currency
 	};
 	if (record.kind === 'asset') {
+		const gold = record.weight != null && record.price != null;
 		return {
 			...common,
+			...(gold ? { amount: money(record.acquisition!), weight: money(record.weight!), price: money(record.price!) } : {}),
 			name: record.name!,
 			cls: record.cls!,
 			...(record.source ? { source: record.source } : {}),
 			...(record.term ? { term: record.term } : {}),
-			acquisition: record.acquisition == null ? '' : money(record.acquisition),
+			acquisition: gold || record.acquisition == null ? '' : money(record.acquisition),
 			note: record.note
 		};
 	}

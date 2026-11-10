@@ -349,3 +349,52 @@ test(
 		expect(await page.getByLabel('Asset sold').locator('option').allTextContents()).toEqual(['No assets recorded yet']);
 	}
 );
+
+test('adding the goldbar Antam of 2,5 grams at 1.500.000 per gram for 3.000.000 shows a market value of 3.750.000 and stores it', async () => {
+	const { name, cookie } = await registered();
+	const page = await openPage('/add', cookie);
+	await chooseType(page, 'Asset / Liability');
+	await page.getByLabel('Class').selectOption('Goldbar');
+	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');
+	await page.getByLabel('Name').fill('Antam');
+	await page.getByLabel('Weight (grams)').pressSequentially('2,5');
+	await page.getByLabel('Market price per gram').pressSequentially('1500000');
+
+	expect(await page.getByText('Market value:').textContent()).toContain('3.750.000');
+	await page.getByRole('button', { name: 'Add entry' }).click();
+
+	await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+	expect(rows('assets', name)).toEqual([
+		expect.objectContaining({ name: 'Antam', class: 'Goldbar', value: 3750000, acquisition: 3000000, weight: 2.5, price: 1500000 })
+	]);
+});
+
+test('choosing the goldbar class shows a dash as the market value before the user types a weight and a price', async () => {
+	const { cookie } = await registered();
+	const page = await openPage('/add', cookie);
+	await chooseType(page, 'Asset / Liability');
+
+	await page.getByLabel('Class').selectOption('Goldbar');
+
+	expect(await page.getByText('Market value:').textContent()).toContain('–');
+	expect(await page.getByLabel(/^Acquisition value/).count()).toBe(0);
+});
+
+test('adding a goldbar without a weight flags the weight field and keeps the typed price per gram', async () => {
+	const { name, cookie } = await registered();
+	const page = await openPage('/add', cookie);
+	await chooseType(page, 'Asset / Liability');
+	await page.getByLabel('Class').selectOption('Goldbar');
+	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');
+	await page.getByLabel('Name').fill('Antam');
+	await page.getByLabel('Market price per gram').pressSequentially('1500000');
+
+	await page.getByRole('button', { name: 'Add entry' }).click();
+
+	await expect
+		.poll(() => page.getByRole('alert').textContent())
+		.toBe('Please enter the weight in grams (numbers only).');
+	expect(await page.getByLabel('Weight (grams)').getAttribute('aria-invalid')).toBe('true');
+	expect(await page.getByLabel('Market price per gram').inputValue()).toBe('1.500.000');
+	expect(rows('assets', name)).toEqual([]);
+});

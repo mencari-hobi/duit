@@ -7,7 +7,7 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' | 'weight' | 'price' };
 
 type Added = { added: true };
 
@@ -35,28 +35,44 @@ function lastAcquisition(db: Db, userId: number, name: string) {
 	return row?.acquisition;
 }
 
+type Gold = { weight: number; price: number };
+
+function parseGold(fields: EntryFields): Refusal | Gold {
+	const weight = parseAmount(field(fields, 'weight'));
+	if (weight === null) return { message: 'Please enter the weight in grams (numbers only).', field: 'weight' };
+	const price = parseAmount(field(fields, 'price'));
+	if (price === null) return { message: 'Please enter the market price per gram (numbers only).', field: 'price' };
+	return { weight, price };
+}
+
 function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
 	const name = field(fields, 'name');
 	if (!name) return { message: 'Please enter a name for the asset.', field: 'name' };
 	const cls = field(fields, 'cls');
 	const liability = cls === 'Liability';
+	const gold = cls === 'Goldbar' ? parseGold(fields) : null;
+	if (gold && 'message' in gold) return gold;
 	const acquisition = liability
 		? null
-		: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
+		: gold
+			? common.amount
+			: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
 	db.prepare(
-		`INSERT INTO assets (id, user_id, date, name, class, value, currency, source, term, acquisition, note)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`INSERT INTO assets (id, user_id, date, name, class, value, currency, source, term, acquisition, weight, price, note)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	).run(
 		id,
 		userId,
 		common.date,
 		name,
 		cls,
-		common.amount,
+		gold ? gold.weight * gold.price : common.amount,
 		common.currency,
 		liability ? null : field(fields, 'source'),
 		liability ? field(fields, 'term') : null,
 		acquisition,
+		gold?.weight ?? null,
+		gold?.price ?? null,
 		common.note
 	);
 	return { added: true };

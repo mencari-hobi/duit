@@ -139,6 +139,17 @@ test(
 );
 
 test(
+	'a goldbar asset of 2.000.000 reads "Non-liquid assets" 2,00 with a "Goldbar" line of 2,00',
+	{ meta: { scenario: 'S135' } },
+	() => {
+		asset('2026/11/01', 'Savings account', '6.000.000');
+		asset('2026/11/01', 'Antam 10 g', '2.000.000', { cls: 'Goldbar', weight: '10', price: '200.000' });
+
+		expect([line('Liquid assets'), line('Non-liquid assets'), line('Goldbar')]).toEqual([6000000, 2000000, 2000000]);
+	}
+);
+
+test(
 	'an asset worth 12.000.000 bought for 10.000.000 reads a capital gain of 2.000.000, 20% of its acquisition value',
 	{ meta: { scenario: 'S112' } },
 	() => {
