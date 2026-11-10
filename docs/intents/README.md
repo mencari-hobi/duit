@@ -37,3 +37,8 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I9: The user finds, fixes, and removes their entries on the Records page
 - Why: The user follows the mockup to the Records menu, after the Add page and the dashboard
 - Serves: F16, F17, F18
+
+## Intent I10: The Report page gives the monthly statement and ratios of the mockup
+- Why: The user follows the mockup to its last menu, after the Records page
+- Serves: F19
+- Not: a "Swipe for more" text hint, since the user wants a fade that shows the table scrolls

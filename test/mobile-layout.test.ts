@@ -90,3 +90,21 @@ test(
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
+
+test(
+	'the report with three months of entries fits a 360 px wide screen',
+	{ meta: { scenario: 'S120' } },
+	async () => {
+		const { cookie } = await registered();
+		for (const month of ['09', '10', '11']) {
+			const date = `2026/${month}/05`;
+			await post('/add', { type: 'income', date, amount: '125.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+			await post('/add', { type: 'expense', date, amount: '35.000.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+			await post('/add', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
+		}
+
+		const page = await openPage('/report', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);
