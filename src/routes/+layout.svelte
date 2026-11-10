@@ -1,7 +1,14 @@
 <script lang="ts">
 	import '../app.css';
+	import Shell from '#lib/Shell.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 </script>
 
-{@render children()}
+{#if data.user}
+	<Shell settings={data.settings}>
+		{@render children()}
+	</Shell>
+{:else}
+	{@render children()}
+{/if}

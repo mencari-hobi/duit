@@ -20,6 +20,36 @@ export function openDatabase(path: string): Db {
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			created_at INTEGER NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS settings (
+			user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+			currency TEXT NOT NULL,
+			start_day INTEGER NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS entries (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+			date TEXT NOT NULL,
+			amount REAL NOT NULL,
+			currency TEXT NOT NULL,
+			category TEXT NOT NULL,
+			expense_type TEXT,
+			owner TEXT,
+			note TEXT NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS assets (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			date TEXT NOT NULL,
+			name TEXT NOT NULL,
+			class TEXT NOT NULL,
+			value REAL NOT NULL,
+			currency TEXT NOT NULL,
+			source TEXT,
+			term TEXT,
+			acquisition REAL,
+			note TEXT NOT NULL
+		);
 	`);
 	return db;
 }

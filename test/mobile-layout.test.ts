@@ -1,32 +1,9 @@
-import { chromium, type Browser, type Page } from 'playwright';
-import { afterAll, beforeAll, expect, inject, test } from 'vitest';
-import { registered } from './app';
+import type { Page } from 'playwright';
+import { expect, test } from 'vitest';
+import { post, registered } from './app';
+import { openPage } from './browser';
 
-const baseUrl = inject('baseUrl');
 const phoneWidth = 360;
-
-let browser: Browser;
-
-beforeAll(async () => {
-	browser = await chromium.launch();
-});
-
-afterAll(async () => {
-	await browser.close();
-});
-
-async function openOnPhone(path: string, cookie = '') {
-	const context = await browser.newContext({ viewport: { width: phoneWidth, height: 640 } });
-	if (cookie) {
-		const split = cookie.indexOf('=');
-		await context.addCookies([
-			{ name: cookie.slice(0, split), value: cookie.slice(split + 1), url: baseUrl }
-		]);
-	}
-	const page = await context.newPage();
-	await page.goto(`${baseUrl}${path}`);
-	return page;
-}
 
 function pageWidth(page: Page) {
 	return page.evaluate(() => document.documentElement.scrollWidth);
@@ -42,7 +19,7 @@ test(
 	'the login page fits a 360 px wide screen and shows the whole "Log in" button',
 	{ meta: { scenario: 'S17' } },
 	async () => {
-		const page = await openOnPhone('/login');
+		const page = await openPage('/login', '', phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Log in');
@@ -55,9 +32,61 @@ test(
 	async () => {
 		const { cookie } = await registered();
 
-		const page = await openOnPhone('/', cookie);
+		const page = await openPage('/', cookie, phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Log out');
+	}
+);
+
+test(
+	'the add page fits a 360 px wide screen and shows the whole "Add entry" button',
+	{ meta: { scenario: 'S41' } },
+	async () => {
+		const { cookie } = await registered();
+
+		const page = await openPage('/add', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+		await expectWholeOnScreen(page, 'Add entry');
+	}
+);
+
+test(
+	'the dashboard with a year of entries fits a 360 px wide screen, and every chart fits its card',
+	{ meta: { scenario: 'S86' } },
+	async () => {
+		const { cookie } = await registered();
+		for (let month = 1; month <= 12; month++) {
+			const date = `2026/${String(month).padStart(2, '0')}/05`;
+			await post('/add', { type: 'income', date, amount: '9.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+			await post('/add', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
+		}
+
+		const page = await openPage('/', cookie, phoneWidth);
+		await page.locator('[data-chart] svg').first().waitFor();
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+		const overflowing = await page.evaluate(() =>
+			[...document.querySelectorAll<HTMLElement>('[data-chart]')]
+				.filter((chart) => chart.offsetParent !== null)
+				.filter((chart) => chart.scrollWidth > chart.clientWidth || chart.getBoundingClientRect().right > 360)
+				.map((chart) => chart.dataset.chart)
+		);
+		expect(overflowing).toEqual([]);
+	}
+);
+
+test(
+	'the records page with entries fits a 360 px wide screen',
+	{ meta: { scenario: 'S104' } },
+	async () => {
+		const { cookie } = await registered();
+		await post('/add', { type: 'expense', date: '2026/11/02', amount: '1.250.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+		await post('/add', { type: 'asset', date: '2026/11/05', amount: '120.000.000', currency: 'IDR', name: 'Savings account at a bank with a long name', cls: 'Investments', source: 'Freelance', note: '' }, cookie);
+
+		const page = await openPage('/records', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
