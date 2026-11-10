@@ -19,6 +19,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S18: On a 360 px wide screen, `/` for a signed-in user fits the screen width and shows the whole "Log out" button (happy path)
   - Scenario S41: On a 360 px wide screen, `/add` fits the screen width and shows the whole "Add entry" button
   - Scenario S86: On a 360 px wide screen, `/` with a year of entries fits the screen width, and every chart fits its card
+  - Scenario S104: On a 360 px wide screen, `/records` with entries fits the screen width
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -96,6 +97,34 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R28: The acquisition value groups thousands with a dot as the user types, like the amount
   - Scenario S60: Typing 12500000 into the acquisition value shows "12.500.000"
   - Scenario S61: Adding an asset with the acquisition value "12.500.000" stores 12500000
+
+## Area A7: App › Records
+
+### Feature F16: Records list
+- Rule R43: The records list shows every entry of the account, newest first
+  - Scenario S87: An expense dated 2026/11/02 and an asset dated 2026/11/05 list the asset first, each with its date as YYYY/MM/DD, its type, and its amount (happy path)
+  - Scenario S88: An income under "salary" lists as "Salary", with "–" for the expense type and the owner
+  - Scenario S89: An asset lists with its class, its source, and its cost, e.g. "Savings account (Cash) · funded by Salary · cost 12.000.000"
+  - Scenario S90: An amount of 1250000 in "USD" lists as "1.250.000" beside "USD"
+  - Scenario S91: The entries of another account stay out of the list
+  - Scenario S92: The Records page reads "Nothing here yet." for an account without entries
+
+### Feature F17: Record editing
+- Rule R44: "Edit" opens the entry on the Add page, and saving replaces it
+  - Scenario S94: Choosing "Edit" on an expense opens the Add page with its type, date, amount, currency, category, expense type, owner, and note filled, and the button reads "Save changes" (happy path)
+  - Scenario S95: Saving the amount 75.000 on an edited expense stores 75000 on the same entry, adds no entry, and opens `/records`
+  - Scenario S96: Saving the value 13.000.000 on an edited asset stores 13000000 on the same asset and adds no asset
+  - Scenario S97: "Cancel edit" opens `/records` and leaves the entry unchanged
+  - Scenario S98: Saving changes to an entry of another account leaves that entry unchanged
+
+### Feature F18: Record deletion
+- Rule R45: The delete action on a row removes that entry
+  - Scenario S99: Deleting an expense removes it from the list and from storage (happy path)
+  - Scenario S100: Deleting an entry of another account leaves that entry stored
+- Rule R46: "Delete all data" removes every entry of the account after the user confirms "Delete ALL records? This cannot be undone."
+  - Scenario S101: Confirming "Delete all data" removes every income, expense, and asset of the account, and the list reads "Nothing here yet."
+  - Scenario S102: Cancelling the confirmation keeps every entry
+  - Scenario S103: Deleting all data leaves the entries of another account stored
 
 ## Area A2: App › Register
 

@@ -33,3 +33,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I8: The dashboard reads well on a phone held upright, however many months it shows
 - Why: The user is unsure how to arrange the charts, and fears a wide chart squeezed onto a narrow portrait screen
 - Serves: F13, F14, F15, S86
+
+## Intent I9: The user finds, fixes, and removes their entries on the Records page
+- Why: The user follows the mockup to the Records menu, after the Add page and the dashboard
+- Serves: F16, F17, F18

@@ -1,6 +1,7 @@
 import { parseAmount } from '#lib/amount.ts';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
+import { recordKey } from './records';
 import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
@@ -33,7 +34,7 @@ function lastAcquisition(db: Db, userId: number, name: string) {
 	return row?.acquisition;
 }
 
-function addAsset(db: Db, userId: number, fields: EntryFields, common: Common): Refusal | Added {
+function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
 	const name = field(fields, 'name');
 	if (!name) return { message: 'Please enter a name for the asset.', field: 'name' };
 	const cls = field(fields, 'cls');
@@ -42,9 +43,10 @@ function addAsset(db: Db, userId: number, fields: EntryFields, common: Common): 
 		? null
 		: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
 	db.prepare(
-		`INSERT INTO assets (user_id, date, name, class, value, currency, source, term, acquisition, note)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`INSERT INTO assets (id, user_id, date, name, class, value, currency, source, term, acquisition, note)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	).run(
+		id,
 		userId,
 		common.date,
 		name,
@@ -59,12 +61,13 @@ function addAsset(db: Db, userId: number, fields: EntryFields, common: Common): 
 	return { added: true };
 }
 
-function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common: Common): Added {
+function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Added {
 	const expense = fields.type === 'expense';
 	db.prepare(
-		`INSERT INTO entries (user_id, kind, date, amount, currency, category, expense_type, owner, note)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		`INSERT INTO entries (id, user_id, kind, date, amount, currency, category, expense_type, owner, note)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	).run(
+		id,
 		userId,
 		expense ? 'expense' : 'income',
 		common.date,
@@ -78,12 +81,42 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 	return { added: true };
 }
 
-export function addEntry(db: Db, userId: number, fields: EntryFields): Refusal | Added {
+function insert(db: Db, userId: number, fields: EntryFields, id: number | null): Refusal | Added {
 	const common = parseCommon(fields);
 	if ('message' in common) return common;
 	return fields.type === 'asset'
-		? addAsset(db, userId, fields, common)
-		: addIncomeOrExpense(db, userId, fields, common);
+		? addAsset(db, userId, fields, common, id)
+		: addIncomeOrExpense(db, userId, fields, common, id);
+}
+
+export function addEntry(db: Db, userId: number, fields: EntryFields): Refusal | Added {
+	return insert(db, userId, fields, null);
+}
+
+class Refused extends Error {
+	constructor(readonly refusal: Refusal) {
+		super(refusal.message);
+	}
+}
+
+export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal | Added | { missing: true } {
+	if (!fields.id) return addEntry(db, userId, fields);
+	const old = recordKey(fields.id);
+	if (!old || !db.prepare(`SELECT 1 FROM ${old.table} WHERE id = ? AND user_id = ?`).get(old.id, userId)) {
+		return { missing: true };
+	}
+	const table = fields.type === 'asset' ? 'assets' : 'entries';
+	try {
+		return db.transaction(() => {
+			db.prepare(`DELETE FROM ${old.table} WHERE id = ?`).run(old.id);
+			const result = insert(db, userId, fields, table === old.table ? old.id : null);
+			if ('message' in result) throw new Refused(result);
+			return result;
+		})();
+	} catch (error) {
+		if (error instanceof Refused) return error.refusal;
+		throw error;
+	}
 }
 
 export function entryCategories(db: Db, userId: number) {

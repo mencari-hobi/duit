@@ -21,7 +21,8 @@
 
 	let { data, form: action }: PageProps = $props();
 	const form = $derived(action as Form);
-	const sent = untrack(() => form?.values);
+	const editing = untrack(() => data.editing);
+	const sent = untrack(() => form?.values ?? editing);
 
 	const defaults = {
 		income: ['salary', 'freelance', 'dividend', 'bonus', 'other'],
@@ -48,7 +49,7 @@
 		asset: 'has-checked:bg-chart-5/15 has-checked:text-chart-5'
 	};
 
-	const kept = $derived(form?.values ?? {});
+	const kept = $derived(form?.values ?? editing ?? {});
 	let date = $state(sent?.date ?? slashDate(today(getLocalTimeZone())));
 	let calendarOpen = $state(false);
 	const picked = $derived(isoDate(date) ? parseDate(isoDate(date)!) : undefined);
@@ -108,8 +109,15 @@
 {/snippet}
 
 <form method="POST" novalidate class="flex w-full max-w-2xl flex-col gap-5">
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+		<div class="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 py-1 pr-1 pl-3 text-sm">
+			<span>Editing the {editing.type} of <span class="tabular-nums">{editing.date}</span></span>
+			<Button href="/records" variant="ghost" class="h-11 px-3 text-base text-primary">Cancel edit</Button>
+		</div>
+	{/if}
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-3xl">Add</h1>
+		<h1 class="text-3xl">{editing ? 'Edit' : 'Add'}</h1>
 		<fieldset class="flex w-full rounded-full border bg-card p-1 sm:w-auto">
 			<legend class="sr-only">Entry type</legend>
 			{#each types as [value, label] (value)}
@@ -328,7 +336,7 @@
 	<div
 		class="sticky bottom-0 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 pt-3 pb-4 backdrop-blur md:static md:mx-0 md:flex-row-reverse md:items-center md:justify-start md:gap-4 md:border-0 md:bg-transparent md:p-0"
 	>
-		<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">Add entry</Button>
+		<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">{editing ? 'Save changes' : 'Add entry'}</Button>
 		{#if form?.error}
 			<p id="message" role="alert" class="font-semibold text-destructive">{form.error}</p>
 		{:else if form?.added}

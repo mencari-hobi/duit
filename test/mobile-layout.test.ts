@@ -76,3 +76,17 @@ test(
 		expect(overflowing).toEqual([]);
 	}
 );
+
+test(
+	'the records page with entries fits a 360 px wide screen',
+	{ meta: { scenario: 'S104' } },
+	async () => {
+		const { cookie } = await registered();
+		await post('/add', { type: 'expense', date: '2026/11/02', amount: '1.250.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+		await post('/add', { type: 'asset', date: '2026/11/05', amount: '120.000.000', currency: 'IDR', name: 'Savings account at a bank with a long name', cls: 'Investments', source: 'Freelance', note: '' }, cookie);
+
+		const page = await openPage('/records', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);

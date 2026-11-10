@@ -51,3 +51,12 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F15
 - S83: screen, server, auth, db
+
+## F16
+- S87: screen, server, auth, db
+
+## F17
+- S95: screen, server, auth, db
+
+## F18
+- S99: screen, server, auth, db
