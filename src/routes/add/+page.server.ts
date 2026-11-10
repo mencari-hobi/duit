@@ -1,6 +1,6 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { database } from '#lib/server/db.ts';
-import { entryCategories, saveEntry } from '#lib/server/entries.ts';
+import { entryCategories, heldAssets, saveEntry } from '#lib/server/entries.ts';
 import { editableRecord } from '#lib/server/records.ts';
 import { signedInUser } from '#lib/server/session.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -10,7 +10,7 @@ export const load: PageServerLoad = ({ locals, url }) => {
 	const key = url.searchParams.get('edit');
 	const editing = key ? editableRecord(database(), user.id, key) : null;
 	if (key && !editing) error(404, 'Entry not found');
-	return { categories: entryCategories(database(), user.id), editing };
+	return { categories: entryCategories(database(), user.id), held: heldAssets(database(), user.id), editing };
 };
 
 export const actions: Actions = {

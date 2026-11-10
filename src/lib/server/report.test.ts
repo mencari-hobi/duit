@@ -305,3 +305,32 @@ test('an asset class without a value in any column stays out of the report', () 
 		'Total Assets (market value)'
 	]);
 });
+
+const memo = 'Sales of Asset (memo, not counted as income)';
+
+test(
+	'a salary of 8.000.000 and a sale of 50.000.000 read total income 8.000.000 and the sale on the memo line',
+	{ meta: { scenario: 'S133' } },
+	() => {
+		asset('2026/10/01', 'Car', '50.000.000', { cls: 'Other' });
+		income('2026/11/01', '8.000.000');
+		addEntry(db, alice, {
+			type: 'income',
+			date: '2026/11/02',
+			amount: '50.000.000',
+			currency: 'IDR',
+			category: 'sales of asset',
+			asset: 'Car'
+		});
+
+		expect([line('Total Income'), line(memo)]).toEqual([8000000, 50000000]);
+	}
+);
+
+test('three reporting months without a sale leave out the memo line', { meta: { scenario: 'S134' } }, () => {
+	income('2026/11/01', '8.000.000');
+
+	const labels = loadReport(db, alice)!.sections.flatMap((section) => section.lines).map((row) => row.label);
+
+	expect(labels).not.toContain(memo);
+});

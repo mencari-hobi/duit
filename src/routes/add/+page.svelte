@@ -9,7 +9,7 @@
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { regroup, sizeOf } from '#lib/amount.ts';
-	import { capitalize } from '#lib/category.ts';
+	import { capitalize, sale } from '#lib/category.ts';
 	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
@@ -25,7 +25,7 @@
 	const sent = untrack(() => form?.values ?? editing);
 
 	const defaults = {
-		income: ['salary', 'freelance', 'dividend', 'bonus', 'other'],
+		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
 		expense: [
 			'grocery', 'eating out', 'electricity', 'gasoline & tolls', 'school tuition', 'phone credit',
 			'internet', 'self care/entertainment', 'clothes', 'sports/gym', 'healthcare', 'courses',
@@ -63,6 +63,10 @@
 		type === 'asset' ? [] : [...new Set([...defaults[type], ...data.categories[type]])]
 	);
 	let category = $derived((kept.type === type && kept.category) || list[0]);
+	const selling = $derived(type === 'income' && category === sale);
+	const held = $derived(
+		[...new Set([...data.held, ...(editing?.asset ? [editing.asset] : [])])].sort()
+	);
 	let open = $state(false);
 	let search = $state('');
 	const typed = $derived(search.trim().toLowerCase());
@@ -322,6 +326,18 @@
 					</Popover.Content>
 				</Popover.Root>
 			</div>
+			{#if selling}
+				<div class="flex flex-col gap-1.5">
+					<Label for="asset">Asset sold</Label>
+					<select id="asset" name="asset" class={select} {...flagged('asset')}>
+						{#each held as name (name)}
+							<option selected={name === kept.asset}>{name}</option>
+						{:else}
+							<option value="">No assets recorded yet</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
 			{#if type === 'expense'}
 				{@render choice('expense-type', 'expenseType', 'Expense type', expenseTypes, kept.expenseType)}
 				{@render choice('owner', 'owner', 'Expense owner', owners, kept.owner)}

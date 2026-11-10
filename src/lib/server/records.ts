@@ -1,3 +1,4 @@
+import { sale } from '#lib/category.ts';
 import { day, money, type Record } from '#lib/record.ts';
 import type { Db } from './db';
 
@@ -51,9 +52,15 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 	return {
 		...common,
 		category: record.category!,
+		...(record.category === sale ? { asset: soldAsset(db, recordKey(key)!.id) } : {}),
 		...(record.kind === 'expense' ? { expenseType: record.expenseType!, owner: record.owner! } : {}),
 		note: record.note
 	};
+}
+
+function soldAsset(db: Db, saleId: number) {
+	const row = db.prepare('SELECT name FROM assets WHERE sale_id = ?').get(saleId) as { name: string } | undefined;
+	return row?.name ?? '';
 }
 
 export function deleteRecord(db: Db, userId: number, key: string) {

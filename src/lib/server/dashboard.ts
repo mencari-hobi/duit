@@ -1,3 +1,4 @@
+import { sale } from '#lib/category.ts';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
 import { readSettings } from './settings';
@@ -51,7 +52,7 @@ export function latestHoldings<T extends { name: string; month: string }>(update
 
 function monthSummary(month: string, flows: Monthly<Flow>[], updates: Monthly<Holding>[]) {
 	const flow = flows.filter((row) => row.month === month);
-	const income = sum(flow.filter((row) => row.kind === 'income'), (row) => row.amount);
+	const income = sum(flow.filter((row) => row.kind === 'income' && row.category !== sale), (row) => row.amount);
 	const spent = flow.filter((row) => row.kind === 'expense');
 	const expenses = sum(spent, (row) => row.amount);
 	const holding = latestHoldings(updates, month);

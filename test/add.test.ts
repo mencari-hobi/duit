@@ -90,13 +90,13 @@ test(
 );
 
 test(
-	'with income chosen, the category list shows salary, freelance, dividend, bonus, and other',
+	'with income chosen, the category list shows salary, freelance, dividend, bonus, other, and sales of asset',
 	{ meta: { scenario: 'S39' } },
 	async () => {
 		const { cookie } = await registered();
 		const page = await openPage('/add', cookie);
 
-		expect(await categoryNames(page)).toEqual(['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other']);
+		expect(await categoryNames(page)).toEqual(['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Sales of Asset']);
 	}
 );
 
@@ -302,5 +302,50 @@ test(
 		expect(await page.getByLabel('Date').inputValue()).toBe(
 			slashed(new Date(today.getFullYear(), today.getMonth(), 1))
 		);
+	}
+);
+
+async function chooseSale(page: Page) {
+	await (await openCategories(page)).getByText('Sales of Asset', { exact: true }).click();
+}
+
+test(
+	'selling car for 150.000.000 stores the proceeds as income and an update of car worth 0 from the sale date',
+	{ meta: { scenario: 'S123' } },
+	async () => {
+		const { name, cookie } = await registered();
+		await post(
+			'/add',
+			{ type: 'asset', date: '2026/10/01', amount: '150.000.000', currency: 'IDR', name: 'Car', cls: 'Other', source: 'Salary' },
+			cookie
+		);
+		const page = await openPage('/add', cookie);
+		await chooseSale(page);
+		await page.getByLabel('Asset sold').selectOption('Car');
+		await page.getByLabel('Amount').pressSequentially('150000000');
+		await page.getByLabel('Date').fill('2026-11-03');
+
+		await page.getByRole('button', { name: 'Add entry' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+		expect(rows('entries', name)).toEqual([
+			expect.objectContaining({ kind: 'income', date: '2026-11-03', amount: 150000000, category: 'sales of asset' })
+		]);
+		expect(rows('assets', name)).toContainEqual(
+			expect.objectContaining({ name: 'Car', date: '2026-11-03', value: 0, acquisition: 0 })
+		);
+	}
+);
+
+test(
+	'for an account without a held asset, the asset sold list reads "No assets recorded yet"',
+	{ meta: { scenario: 'S126' } },
+	async () => {
+		const { cookie } = await registered();
+		const page = await openPage('/add', cookie);
+
+		await chooseSale(page);
+
+		expect(await page.getByLabel('Asset sold').locator('option').allTextContents()).toEqual(['No assets recorded yet']);
 	}
 );

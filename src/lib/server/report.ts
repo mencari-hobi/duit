@@ -1,4 +1,4 @@
-import { capitalize } from '#lib/category.ts';
+import { capitalize, sale } from '#lib/category.ts';
 import type { Line, Report } from '#lib/report.ts';
 import { expenseTypes, latestHoldings, monthOf } from './dashboard';
 import type { Db } from './db';
@@ -37,9 +37,11 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 	let fixed = 0;
 	let installments = 0;
 	let mortgage = 0;
+	let sales = 0;
 	for (const row of flows.filter((row) => row.month === month)) {
+		if (row.kind === 'income' && row.category === sale) sales += row.amount;
+		else if (row.kind === 'income') add(income, row.category, row.amount);
 		if (row.kind === 'income') {
-			add(income, row.category, row.amount);
 			continue;
 		}
 		const type = row.expenseType ?? '';
@@ -72,6 +74,7 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 	const debtTotal = total(debt);
 	return {
 		income,
+		sales,
 		expense,
 		saving,
 		assets,
@@ -135,6 +138,7 @@ export function loadReport(db: Db, userId: number): Report | null {
 	const flow = [
 		sum('Total Income', (c) => c.incomeTotal),
 		...keys((c) => c.income).map((name) => line(capitalize(name), 1, (c) => c.income[name] ?? 0)),
+		...(columns.some((c) => c.sales) ? [line('Sales of Asset (memo, not counted as income)', 1, (c) => c.sales)] : []),
 		sum('Total Saving', (c) => c.savingTotal),
 		...classes.filter(inAnyColumn((c) => c.saving)).map((name) => line(name, 1, (c) => c.saving[name] ?? 0)),
 		sum('Total Expense', (c) => c.expenseTotal),

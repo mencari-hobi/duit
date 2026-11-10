@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'vitest';
 import { label, money } from '#lib/record.ts';
 import { register } from './auth';
 import { openDatabase, type Db } from './db';
-import { addEntry, saveEntry } from './entries';
+import { addEntry, heldAssets, saveEntry } from './entries';
 import { deleteRecord, editableRecord, listRecords, wipeRecords } from './records';
 
 let db: Db;
@@ -308,3 +308,44 @@ test('an amount of 12,5 lists as 12,5', () => {
 
 	expect(money(listRecords(db, alice)[0].amount)).toBe('12,5');
 });
+
+const car = () =>
+	addEntry(db, alice, {
+		type: 'asset',
+		date: '2026/10/01',
+		amount: '150.000.000',
+		currency: 'IDR',
+		name: 'Car',
+		cls: 'Other',
+		source: 'Salary'
+	});
+
+const sellCar = () => {
+	addEntry(db, alice, income({ date: '2026/11/03', amount: '150.000.000', category: 'sales of asset', asset: 'Car' }));
+	return listRecords(db, alice).find((row) => row.kind === 'income')!.id;
+};
+
+test(
+	'choosing edit on a sale of car opens it with sales of asset and car chosen',
+	{ meta: { scenario: 'S128' } },
+	() => {
+		car();
+		const key = sellCar();
+
+		expect(editableRecord(db, alice, key)).toMatchObject({ category: 'sales of asset', asset: 'Car' });
+	}
+);
+
+test(
+	'deleting a sale of car removes the 0 update of car, and car returns to the held assets',
+	{ meta: { scenario: 'S130' } },
+	() => {
+		car();
+		const key = sellCar();
+
+		deleteRecord(db, alice, key);
+
+		expect(listRecords(db, alice).filter((row) => row.kind === 'asset').map((row) => row.amount)).toEqual([150000000]);
+		expect(heldAssets(db, alice)).toEqual(['Car']);
+	}
+);

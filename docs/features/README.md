@@ -71,19 +71,33 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S57: Adding the amount "1.250.000" stores 1250000
   - Scenario S58: Adding the amount "12,5" stores 12.5
 - Rule R22: The category list follows the entry type
-  - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", and "Other"
+  - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", "Other", and "Sales of Asset"
   - Scenario S40: With "Expense" chosen, the category list shows the mockup's expense categories, from "Grocery" to "Other Installment"
 - Rule R23: The user adds a new category to the list of its type by typing it into the category list
   - Scenario S42: Typing "Pet Food" into the expense category list and pressing Enter selects "Pet Food" as a new category
   - Scenario S43: After an expense under the new category "Pet Food", the expense category list shows "Pet Food" and the income category list lacks it
-- Rule R24: The app stores a category in lowercase and shows it with each word capitalized, words split by a space or a slash
+- Rule R24: The app stores a category in lowercase and shows it with each word capitalized apart from "of", words split by a space or a slash
   - Scenario S44: Adding an expense under "Self Care/Entertainment" stores the category "self care/entertainment"
   - Scenario S45: An expense stored under "gasoline & tolls" shows as "Gasoline & Tolls" in the expense category list
   - Scenario S46: Typing "GROCERY" as a new expense category picks the listed "Grocery", and the list shows one "Grocery"
+  - Scenario S122: An income stored under "sales of asset" shows as "Sales of Asset" in the income category list
 - Rule R27: An entry stores the currency picked beside its amount, and the picker starts at the default currency
   - Scenario S52: For an account whose default currency is "USD", the currency beside the amount reads "USD" when the Add page opens
   - Scenario S53: Picking "SGD" beside the amount, then adding an expense, stores "SGD" as the expense's currency
   - Scenario S54: Adding an entry with the currency "ABC" shows "Pick a currency from the list." and stores no entry
+
+### Feature F20: Asset sales
+- Rule R54: Adding a "Sales of Asset" income stores the proceeds and sets the sold asset to 0 from the sale date
+  - Scenario S123: Selling "Car" for 150.000.000 on 2026/11/03 stores an income of 150000000 under "sales of asset", and an update of "Car" dated 2026/11/03 worth 0 with an acquisition value of 0 (happy path)
+  - Scenario S124: A sale with a blank note stores the note "Sale of Car"
+- Rule R55: With "Sales of Asset" chosen, the "Asset sold" list offers the assets still held
+  - Scenario S125: The "Asset sold" list shows each asset whose latest value is above 0, and no liability
+  - Scenario S126: For an account without a held asset, the "Asset sold" list reads "No assets recorded yet"
+  - Scenario S127: Adding a sale without a chosen asset shows "Choose the asset that was sold." and stores nothing
+- Rule R56: Editing or deleting a sale moves the sold asset's 0 update with it
+  - Scenario S128: Choosing "Edit" on a sale of "Car" opens the Add page with "Sales of Asset" and "Car" chosen
+  - Scenario S129: Saving the date 2026/11/10 on an edited sale of "Car" leaves one update of "Car" worth 0, dated 2026/11/10
+  - Scenario S130: Deleting a sale of "Car" removes the 0 update of "Car", and "Car" returns to the "Asset sold" list
 
 ### Feature F11: Asset and liability entries
 - Rule R25: An asset or a liability added on the Add page stays with the account
@@ -138,6 +152,9 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S108: An expense of 3.000.000 under "mortgage" as "Fixed - Essential" reads "Total Expense" 3,00, with "Fixed - Essential" 3,00 and "Mortgage" 3,00 under it
   - Scenario S109: A "Cash" asset funded by "Salary" growing from 10.000.000 to 12.000.000 reads "Total Saving" 2,00, with "Cash" 2,00 under it, and an asset funded by "Debt" stays out of saving
   - Scenario S110: Income of 10.000.000, saving of 2.000.000, and expenses of 4.000.000 read "Remaining Amount (income − saving − expense)" 4,00
+- Rule R58: The report keeps asset sales out of "Total Income" and shows them on a memo line
+  - Scenario S133: A salary of 8.000.000 and a sale of 50.000.000 in 2026/11 read "Total Income" 8,00 and "Sales of Asset (memo, not counted as income)" 50,00
+  - Scenario S134: Three reporting months without a sale leave out the memo line
 - Rule R49: The asset section splits assets into liquid and non-liquid, then compares them with their acquisition value and the liabilities
   - Scenario S111: A "Cash" asset of 6.000.000 and a "Property" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Total Assets (market value)" 8,00
   - Scenario S112: An asset worth 12.000.000 with an acquisition value of 10.000.000 reads "Acquisition value" 10,00, "Capital gain (market − acquisition)" 2,00, and "Capital gain % of acquisition value" 20.0%
@@ -189,6 +206,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S67: Income of 10.000.000 and expenses of 4.000.000 in 2026/11 read "Income" 10.000.000, "Expenses" 4.000.000, "Net cash flow" 6.000.000, and "Savings rate 60%" under "Cash flow · 2026/11" (happy path)
   - Scenario S68: Expenses of 4.000.000 in 2026/11 after 5.000.000 in 2026/10 read "▼ 20.0% vs prev. month" on the expenses card
   - Scenario S69: A month without income reads "Savings rate –"
+- Rule R57: The dashboard's income leaves out asset sales
+  - Scenario S131: A salary of 10.000.000 and a sale of 150.000.000 in 2026/11 read "Income" 10.000.000 under "Cash flow · 2026/11" and on the income vs expense chart
 - Rule R31: Net worth sums each asset's latest value, minus each liability's latest value, up to the month
   - Scenario S70: With "Savings account" updated from 10.000.000 to 12.000.000, and "Mortgage loan" at 3.000.000, the "Net worth" card reads 9.000.000
 - Rule R32: Own-funded assets leave out the assets funded by "Debt"

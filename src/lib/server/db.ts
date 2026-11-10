@@ -48,9 +48,14 @@ export function openDatabase(path: string): Db {
 			source TEXT,
 			term TEXT,
 			acquisition REAL,
-			note TEXT NOT NULL
+			note TEXT NOT NULL,
+			sale_id INTEGER REFERENCES entries(id) ON DELETE CASCADE
 		);
 	`);
+	const columns = db.prepare('PRAGMA table_info(assets)').all() as { name: string }[];
+	if (!columns.some((column) => column.name === 'sale_id')) {
+		db.exec('ALTER TABLE assets ADD COLUMN sale_id INTEGER REFERENCES entries(id) ON DELETE CASCADE');
+	}
 	return db;
 }
 
