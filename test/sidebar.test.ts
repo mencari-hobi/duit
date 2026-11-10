@@ -14,10 +14,10 @@ async function phoneWithMenuOpen() {
 }
 
 test(
-	'opening add, records, or report without a session cookie redirects to login',
+	'opening add, assets, records, or report without a session cookie redirects to login',
 	{ meta: { scenario: 'S19' } },
 	async () => {
-		for (const path of ['/add', '/records', '/report']) {
+		for (const path of ['/add', '/assets', '/records', '/report']) {
 			const response = await get(path);
 
 			expect(response.headers.get('location')).toBe('/login');
@@ -26,7 +26,7 @@ test(
 );
 
 test(
-	'each sidebar menu item opens its page',
+	'each sidebar menu item opens its page, assets included',
 	{ meta: { scenario: 'S20' } },
 	async () => {
 		const { cookie } = await registered();
@@ -36,6 +36,7 @@ test(
 		for (const [label, path] of [
 			['Dashboard', '/'],
 			['Add', '/add'],
+			['Assets', '/assets'],
 			['Records', '/records'],
 			['Report', '/report']
 		]) {
@@ -61,6 +62,7 @@ test(
 		expect(marks).toEqual([
 			['Dashboard', null],
 			['Add', null],
+			['Assets', null],
 			['Records', 'page'],
 			['Report', null]
 		]);

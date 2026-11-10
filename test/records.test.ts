@@ -206,3 +206,20 @@ test('tapping an expense row on a phone opens the add page to edit it', async ()
 	expect(await page.getByLabel('Amount').inputValue()).toBe('50.000');
 	expect(await page.getByRole('button', { name: 'Save changes' }).isVisible()).toBe(true);
 });
+
+test(
+	'choosing edit on an asset opens that valuation for editing on the asset page',
+	{ meta: { scenario: 'S96' } },
+	async () => {
+		const { name, cookie } = await withEntries();
+		const [stored] = rows('assets', name);
+		const page = await openPage('/records', cookie);
+
+		await page.getByRole('row', { name: /Savings account/ }).getByRole('link', { name: 'Edit' }).click();
+		await page.waitForURL((url) => url.pathname === '/assets/Savings%20account');
+
+		expect(new URL(page.url()).searchParams.get('edit')).toBe(`a${stored.id}`);
+		expect(await page.getByLabel('Market value').inputValue()).toBe('12.000.000');
+		expect(await page.getByRole('button', { name: 'Save changes' }).isVisible()).toBe(true);
+	}
+);

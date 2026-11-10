@@ -17,6 +17,7 @@
 	const menu = [
 		{ href: '/', label: 'Dashboard' },
 		{ href: '/add', label: 'Add' },
+		{ href: '/assets', label: 'Assets' },
 		{ href: '/records', label: 'Records' },
 		{ href: '/report', label: 'Report' }
 	];

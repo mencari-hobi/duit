@@ -46,3 +46,11 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I11: Selling an asset turns it into cash without counting the proceeds as earnings
 - Why: The user wants to record a sale by picking the sold asset from the assets they still hold
 - Serves: F20, R57, R58, S122
+
+## Intent I12: The user manages every asset and liability, with its worth over time, from one menu
+- Why: Assets grow or shrink over time, and the user wants an "Assets" menu where each asset has many valuations
+- Serves: A9, R61, S20
+
+## Intent I13: A new asset opens on what the user paid for it, with its market value beside it
+- Why: The user asked to swap the acquisition value with the market value on the asset form
+- Serves: R60, R28

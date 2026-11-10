@@ -12,6 +12,8 @@
 	const days = $derived(Map.groupBy(records, day));
 
 	const dot = { income: 'bg-in', expense: 'bg-out', asset: 'bg-chart-5' };
+	const editHref = (record: Record) =>
+		record.kind === 'asset' ? `/assets/${encodeURIComponent(record.name!)}?edit=${record.id}` : `/add?edit=${record.id}`;
 </script>
 
 {#snippet remove(record: Record)}
@@ -83,7 +85,7 @@
 					{#each rows as record (record.id)}
 						<li class="flex items-center pr-1">
 							<a
-								href="/add?edit={record.id}"
+								href={editHref(record)}
 								aria-label="Edit {label(record)} of {date}"
 								class="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 text-foreground no-underline hover:no-underline"
 							>
@@ -141,7 +143,7 @@
 							</Table.Cell>
 							<Table.Cell class="pr-2 text-right">
 								<span class="inline-flex gap-1">
-									<Button href="/add?edit={record.id}" variant="ghost" size="sm"><PencilIcon />Edit</Button>
+									<Button href={editHref(record)} variant="ghost" size="sm"><PencilIcon />Edit</Button>
 									{@render remove(record)}
 								</span>
 							</Table.Cell>
