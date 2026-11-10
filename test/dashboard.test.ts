@@ -111,12 +111,14 @@ test(
 	}
 );
 
-function addAsset(cookie: string, date: string, name: string, amount: string, fields: Record<string, string> = {}) {
-	return post(
+async function addAsset(cookie: string, date: string, name: string, amount: string, fields: Record<string, string> = {}) {
+	const added = await post(
 		'/add',
 		{ type: 'asset', date, amount, currency: 'IDR', name, cls: 'Cash', source: 'Salary', note: '', ...fields },
 		cookie
 	);
+	if (added.status !== 400) return added;
+	return post(`/assets/${encodeURIComponent(name)}?/valuation`, { date, amount, acquisition: '', note: '' }, cookie);
 }
 
 function addDollarExpense(cookie: string, date: string, amount: string) {

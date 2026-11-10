@@ -30,7 +30,7 @@ export function recordKey(key: string) {
 
 export function editableRecord(db: Db, userId: number, key: string): { [field: string]: string } | null {
 	const record = listRecords(db, userId).find((row) => row.id === key);
-	if (!record) return null;
+	if (!record || record.kind === 'asset') return null;
 	const common = {
 		id: record.id,
 		type: record.kind,
@@ -38,19 +38,6 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 		amount: money(record.amount),
 		currency: record.currency
 	};
-	if (record.kind === 'asset') {
-		const gold = record.weight != null && record.price != null;
-		return {
-			...common,
-			...(gold ? { amount: money(record.acquisition!), weight: money(record.weight!), price: money(record.price!) } : {}),
-			name: record.name!,
-			cls: record.cls!,
-			...(record.source ? { source: record.source } : {}),
-			...(record.term ? { term: record.term } : {}),
-			acquisition: gold || record.acquisition == null ? '' : money(record.acquisition),
-			note: record.note
-		};
-	}
 	return {
 		...common,
 		category: record.category!,

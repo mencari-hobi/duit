@@ -230,39 +230,6 @@ test('adding an asset with the note BCA stores the note', { meta: { scenario: 'S
 	expect(assetRows()[0].note).toBe('BCA');
 });
 
-test(
-	'adding a first savings account with a blank acquisition value stores its value as the acquisition value',
-	{ meta: { scenario: 'S50' } },
-	() => {
-		addEntry(db, alice, asset({ amount: '12.000.000' }));
-
-		expect(assetRows()[0].acquisition).toBe(12000000);
-	}
-);
-
-test(
-	'adding savings account again with a blank acquisition value stores the acquisition value of its last entry',
-	{ meta: { scenario: 'S51' } },
-	() => {
-		addEntry(db, alice, asset({ date: '2026-10-01', amount: '10.000.000', acquisition: '9.000.000' }));
-		addEntry(db, alice, asset({ date: '2026-10-15', amount: '11.000.000', acquisition: '10.500.000' }));
-
-		addEntry(db, alice, asset({ date: '2026-11-01', amount: '12.000.000' }));
-
-		expect(assetRows().at(-1)!.acquisition).toBe(10500000);
-	}
-);
-
-test(
-	'adding an asset with the acquisition value 12.500.000 stores 12500000',
-	{ meta: { scenario: 'S61' } },
-	() => {
-		addEntry(db, alice, asset({ acquisition: '12.500.000' }));
-
-		expect(assetRows()[0].acquisition).toBe(12500000);
-	}
-);
-
 test('adding an expense with a blank category stores it under other', () => {
 	addEntry(db, alice, expense({ category: ' ' }));
 
@@ -352,3 +319,55 @@ test(
 		expect(entryRows()).toHaveLength(1);
 	}
 );
+
+test(
+	'adding AUD Saving with the amount 12.999.954 and the market value 12.659.563 stores a valuation worth 12.659.563 bought for 12.999.954',
+	{ meta: { scenario: 'S140' } },
+	() => {
+		saveEntry(db, alice, asset({ name: 'AUD Saving', amount: '12.999.954', market: '12.659.563' }));
+
+		expect(assetRows()).toEqual([
+			expect.objectContaining({ name: 'AUD Saving', value: 12659563, acquisition: 12999954 })
+		]);
+	}
+);
+
+test(
+	'adding an asset with a blank market value stores the amount as its market value and its acquisition value',
+	{ meta: { scenario: 'S141' } },
+	() => {
+		saveEntry(db, alice, asset({ amount: '12.000.000', market: '' }));
+
+		expect(assetRows()).toEqual([expect.objectContaining({ value: 12000000, acquisition: 12000000 })]);
+	}
+);
+
+test(
+	'adding savings account while the account has "savings account" refuses and stores nothing',
+	{ meta: { scenario: 'S143' } },
+	() => {
+		saveEntry(db, alice, asset({ name: 'savings account' }));
+
+		const result = saveEntry(db, alice, asset({ name: 'Savings account' }));
+
+		expect(result).toEqual({ message: 'That asset exists. Add a valuation on the Assets page.', field: 'name' });
+		expect(assetRows()).toHaveLength(1);
+	}
+);
+
+test(
+	'adding an asset with the market value 12.500.000 stores 12500000',
+	{ meta: { scenario: 'S61' } },
+	() => {
+		saveEntry(db, alice, asset({ amount: '10.000.000', market: '12.500.000' }));
+
+		expect(assetRows()[0].value).toBe(12500000);
+	}
+);
+
+test('adding an asset with the market value "abc" refuses and stores nothing', () => {
+	const result = saveEntry(db, alice, asset({ market: 'abc' }));
+
+	expect(result).toEqual({ message: 'Please enter the market value (numbers only).', field: 'market' });
+	expect(assetRows()).toEqual([]);
+});

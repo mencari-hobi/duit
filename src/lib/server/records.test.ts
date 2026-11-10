@@ -96,21 +96,6 @@ test('the entries of another account stay out of the list', { meta: { scenario: 
 });
 
 test(
-	'saving the value 13.000.000 on an edited asset stores it on the same asset and adds no asset',
-	{ meta: { scenario: 'S96' } },
-	() => {
-		addEntry(db, alice, asset());
-		const [record] = listRecords(db, alice);
-
-		saveEntry(db, alice, { ...asset({ amount: '13.000.000' }), id: record.id });
-
-		expect(listRecords(db, alice)).toEqual([
-			expect.objectContaining({ id: record.id, amount: 13000000 })
-		]);
-	}
-);
-
-test(
 	'saving changes to an entry of another account leaves that entry unchanged',
 	{ meta: { scenario: 'S98' } },
 	() => {
@@ -246,55 +231,6 @@ test('two entries on the same date list the later one first', () => {
 	expect(listRecords(db, alice).map((record) => record.category)).toEqual(['eating out', 'grocery']);
 });
 
-test('an asset opens for editing with its fields shaped for the Add form', () => {
-	addEntry(db, alice, asset({ note: 'BCA' }));
-	const [record] = listRecords(db, alice);
-
-	expect(editableRecord(db, alice, record.id)).toEqual({
-		id: record.id,
-		type: 'asset',
-		date: '2026/11/05',
-		amount: '12.000.000',
-		currency: 'IDR',
-		name: 'Savings account',
-		cls: 'Cash',
-		source: 'Salary',
-		acquisition: '12.000.000',
-		note: 'BCA'
-	});
-});
-
-test('a liability opens for editing with its term, and with the source and acquisition blank', () => {
-	addEntry(db, alice, asset({ name: 'Mortgage', cls: 'Liability', term: 'Long term' }));
-	const [record] = listRecords(db, alice);
-
-	expect(editableRecord(db, alice, record.id)).toEqual({
-		id: record.id,
-		type: 'asset',
-		date: '2026/11/05',
-		amount: '12.000.000',
-		currency: 'IDR',
-		name: 'Mortgage',
-		cls: 'Liability',
-		term: 'Long term',
-		acquisition: '',
-		note: ''
-	});
-});
-
-test(
-	'a goldbar opens for editing with its purchase value as the amount, its weight, and its price per gram',
-	{ meta: { scenario: 'S139' } },
-	() => {
-		addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
-		const [record] = listRecords(db, alice);
-
-		expect(editableRecord(db, alice, record.id)).toEqual(
-			expect.objectContaining({ amount: '3.000.000', cls: 'Goldbar', weight: '2,5', price: '1.500.000', acquisition: '' })
-		);
-	}
-);
-
 test('a goldbar lists with its weight and price per gram', () => {
 	addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
 
@@ -370,3 +306,10 @@ test(
 		expect(heldAssets(db, alice)).toEqual(['Car']);
 	}
 );
+
+test('an asset stays out of editing on the Add form', () => {
+	addEntry(db, alice, asset());
+	const [record] = listRecords(db, alice);
+
+	expect(editableRecord(db, alice, record.id)).toBeNull();
+});

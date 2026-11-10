@@ -108,3 +108,20 @@ test(
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
+
+test(
+	'the assets page with an asset, a liability, and a sold asset fits a 360 px wide screen',
+	{ meta: { scenario: 'S167' } },
+	async () => {
+		const { cookie } = await registered();
+		const asset = { type: 'asset', date: '2026/11/05', currency: 'IDR', note: '' };
+		await post('/add', { ...asset, amount: '120.000.000', market: '135.500.000', name: 'Savings account at a bank with a long name', cls: 'Investments', source: 'Freelance' }, cookie);
+		await post('/add', { ...asset, amount: '300.000.000', name: 'Mortgage loan', cls: 'Liability', term: 'Long term' }, cookie);
+		await post('/add', { ...asset, amount: '150.000.000', name: 'Car', cls: 'Other', source: 'Salary' }, cookie);
+		await post('/add', { type: 'income', date: '2026/11/06', amount: '140.000.000', currency: 'IDR', category: 'sales of asset', asset: 'Car', note: '' }, cookie);
+
+		const page = await openPage('/assets', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);

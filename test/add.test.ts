@@ -62,34 +62,6 @@ test(
 );
 
 test(
-	'adding the cash asset savings account worth 12000000 funded by salary stores it and shows "Added ✓"',
-	{ meta: { scenario: 'S47' } },
-	async () => {
-		const { name, cookie } = await registered();
-		const page = await openPage('/add', cookie);
-		await chooseType(page, 'Asset / Liability');
-		await page.getByLabel('Current value').pressSequentially('12000000');
-		await page.getByLabel('Date').fill('2026-11-03');
-		await page.getByLabel('Name').fill('Savings account');
-		await page.getByLabel('Class').selectOption('Cash');
-		await page.getByLabel('Source of fund').selectOption('Salary');
-
-		await page.getByRole('button', { name: 'Add entry' }).click();
-
-		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
-		expect(rows('assets', name)).toEqual([
-			expect.objectContaining({
-				name: 'Savings account',
-				class: 'Cash',
-				value: 12000000,
-				currency: 'IDR',
-				source: 'Salary'
-			})
-		]);
-	}
-);
-
-test(
 	'with income chosen, the category list shows salary, freelance, dividend, bonus, other, and sales of asset',
 	{ meta: { scenario: 'S39' } },
 	async () => {
@@ -197,21 +169,6 @@ test(
 
 		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
 		expect(rows('entries', name)[0].currency).toBe('SGD');
-	}
-);
-
-test(
-	'typing 12500000 into the acquisition value shows 12.500.000',
-	{ meta: { scenario: 'S60' } },
-	async () => {
-		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
-		await chooseType(page, 'Asset / Liability');
-		const acquisition = page.getByLabel(/^Acquisition value/);
-
-		await acquisition.pressSequentially('12500000');
-
-		expect(await acquisition.inputValue()).toBe('12.500.000');
 	}
 );
 
@@ -398,3 +355,62 @@ test('adding a goldbar without a weight flags the weight field and keeps the typ
 	expect(await page.getByLabel('Market price per gram').inputValue()).toBe('1.500.000');
 	expect(rows('assets', name)).toEqual([]);
 });
+
+test(
+	'adding the cash asset savings account of 12000000 funded by salary stores it and shows "Added ✓"',
+	{ meta: { scenario: 'S47' } },
+	async () => {
+		const { name, cookie } = await registered();
+		const page = await openPage('/add', cookie);
+		await chooseType(page, 'Asset / Liability');
+		await page.getByLabel('Acquisition value (total cost)').pressSequentially('12000000');
+		await page.getByLabel('Date').fill('2026-11-03');
+		await page.getByLabel('Name').fill('Savings account');
+		await page.getByLabel('Class').selectOption('Cash');
+		await page.getByLabel('Source of fund').selectOption('Salary');
+
+		await page.getByRole('button', { name: 'Add entry' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+		expect(rows('assets', name)).toEqual([
+			expect.objectContaining({
+				name: 'Savings account',
+				class: 'Cash',
+				value: 12000000,
+				acquisition: 12000000,
+				currency: 'IDR',
+				source: 'Salary'
+			})
+		]);
+	}
+);
+
+test(
+	'with an asset of the class cash chosen, the amount reads acquisition value and the field below it reads market value',
+	{ meta: { scenario: 'S142' } },
+	async () => {
+		const { cookie } = await registered();
+		const page = await openPage('/add', cookie);
+
+		await chooseType(page, 'Asset / Liability');
+		await page.getByLabel('Class').selectOption('Cash');
+
+		expect(await page.locator('label[for="amount"]').textContent()).toBe('Acquisition value (total cost)');
+		expect((await page.locator('label[for="market"]').textContent())!.trim()).toBe('Market value – blank = same as cost');
+	}
+);
+
+test(
+	'typing 12500000 into the market value shows 12.500.000',
+	{ meta: { scenario: 'S60' } },
+	async () => {
+		const { cookie } = await registered();
+		const page = await openPage('/add', cookie);
+		await chooseType(page, 'Asset / Liability');
+		const market = page.getByLabel(/^Market value/);
+
+		await market.pressSequentially('12500000');
+
+		expect(await market.inputValue()).toBe('12.500.000');
+	}
+);

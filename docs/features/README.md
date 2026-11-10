@@ -9,7 +9,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S1: Opening `/` without a session cookie redirects to `/login`
   - Scenario S2: Opening `/` with a session cookie matching no stored session redirects to `/login`
   - Scenario S3: Opening `/` with a session created more than 30 days ago redirects to `/login`
-  - Scenario S19: Opening `/add`, `/records`, or `/report` without a session cookie redirects to `/login`
+  - Scenario S19: Opening `/add`, `/assets`, `/records`, or `/report` without a session cookie redirects to `/login`
 - Rule R2: The session cookie stays out of reach of page scripts and cross-site requests
   - Scenario S4: The session cookie set on login has `HttpOnly` and `SameSite=Lax`
 
@@ -21,10 +21,11 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S86: On a 360 px wide screen, `/` with a year of entries fits the screen width, and every chart fits its card
   - Scenario S104: On a 360 px wide screen, `/records` with entries fits the screen width
   - Scenario S120: On a 360 px wide screen, `/report` with three months of entries fits the screen width
+  - Scenario S167: On a 360 px wide screen, `/assets` with an asset, a liability, and a sold asset fits the screen width
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
-  - Scenario S20: Each sidebar menu item opens its page: "Dashboard" opens `/`, "Add" opens `/add`, "Records" opens `/records`, "Report" opens `/report` (happy path)
+  - Scenario S20: Each sidebar menu item opens its page: "Dashboard" opens `/`, "Add" opens `/add`, "Assets" opens `/assets`, "Records" opens `/records`, "Report" opens `/report` (happy path)
 - Rule R13: The sidebar menu marks the page on screen
   - Scenario S21: On `/records`, the "Records" menu item has `aria-current="page"` and the other items lack it
 - Rule R14: On a phone, the sidebar opens from a "Menu" button
@@ -106,16 +107,56 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S49: Adding an asset with a blank name shows "Please enter a name for the asset." and stores nothing
   - Scenario S55: Adding the asset "Dollar savings" with "USD" picked beside the amount stores "USD" as the asset's currency
   - Scenario S59: Adding the asset "Savings account" with the note "BCA" stores the note "BCA"
+- Rule R60: For an asset, the amount is its acquisition value, and a blank market value takes the amount
+  - Scenario S140: Adding "AUD Saving" with the amount 12.999.954 and the market value 12.659.563 stores a valuation worth 12.659.563 with an acquisition value of 12.999.954
+  - Scenario S141: Adding an asset with a blank market value stores the amount as its market value and as its acquisition value
+  - Scenario S142: With "Asset / Liability" and "Cash" chosen, the amount reads "Acquisition value (total cost)", and the field below it reads "Market value – blank = same as cost"
+- Rule R61: The Add page adds a new asset, and refuses the name of an asset the account has, ignoring case
+  - Scenario S143: Adding "Savings account" while the account has "savings account" shows "That asset exists. Add a valuation on the Assets page." and stores nothing
 - Rule R59: A goldbar takes its purchase value as the amount, and its value is its weight times the market price per gram
   - Scenario S137: Adding the goldbar "Antam", 2,5 grams at 1.500.000 per gram and bought for 3.000.000, stores a value of 3.750.000 and an acquisition value of 3.000.000
   - Scenario S138: Adding a goldbar without a weight shows "Please enter the weight in grams (numbers only)." and stores no asset
-  - Scenario S139: Editing that goldbar fills the purchase value 3.000.000, the weight 2,5, and the market price per gram 1.500.000
-- Rule R26: A blank acquisition value falls back to the asset's last acquisition value, or to its value on a first entry
-  - Scenario S50: Adding a first "Savings account" with a blank acquisition value stores its value as the acquisition value
-  - Scenario S51: Adding "Savings account" again with a blank acquisition value stores the acquisition value of its last entry
-- Rule R28: The acquisition value groups thousands with a dot as the user types, like the amount
-  - Scenario S60: Typing 12500000 into the acquisition value shows "12.500.000"
-  - Scenario S61: Adding an asset with the acquisition value "12.500.000" stores 12500000
+  - Scenario S139: Editing that goldbar's valuation fills the acquisition value 3.000.000, the weight 2,5, and the market price per gram 1.500.000
+- Rule R28: The market value groups thousands with a dot as the user types, like the amount
+  - Scenario S60: Typing 12500000 into the market value shows "12.500.000"
+  - Scenario S61: Adding an asset with the market value "12.500.000" stores 12500000
+
+## Area A9: App › Assets
+
+### Feature F21: Asset list
+- Rule R62: The Assets page lists each asset of the account with its latest market value, acquisition value, and gain, largest value first
+  - Scenario S144: "Savings account" worth 12.659.563 against an acquisition value of 12.999.954 lists with "12.659.563", "cost 12.999.954", and "−340.391 (−2.6%)" (happy path)
+  - Scenario S145: "Car" worth 150.000.000 lists above "Savings account" worth 12.659.563
+  - Scenario S147: The assets of another account stay out of the list
+- Rule R63: Each stored asset entry is a valuation of the asset it names
+  - Scenario S148: Three stored entries named "Savings account" list as one asset, whose page shows three valuations
+- Rule R64: Liabilities list under "Liabilities" with their latest balance, and sold assets under "Sold"
+  - Scenario S149: "Mortgage loan" at 300.000.000 lists under "Liabilities" with 300.000.000 and without a cost
+  - Scenario S150: "Car" sold on 2026/11/03 lists under "Sold" and leaves the assets section
+- Rule R65: The Assets page of an account without assets points to `/add`
+  - Scenario S151: A new account opening `/assets` reads "No assets yet. Add your first asset on the Add page.", and the link opens `/add`
+
+### Feature F22: Valuations
+- Rule R66: An asset's page lists its valuations newest first, each with its date, market value, acquisition value, and note
+  - Scenario S152: Choosing "Savings account" on the Assets page opens its page, listing the valuations dated 2026/11/10 and 2026/10/10 in that order (happy path)
+  - Scenario S153: Opening the page of another account's asset shows "Asset not found" with status 404
+- Rule R67: "Add valuation" stores a dated market value of the asset, and a blank acquisition value keeps the latest one
+  - Scenario S154: Adding a valuation of "Savings account" dated 2026/11/30 worth 13.100.000 stores it, and the Assets page lists it at 13.100.000
+  - Scenario S155: Adding a valuation with a blank acquisition value stores 12.999.954, the acquisition value of the latest valuation
+  - Scenario S157: Adding a valuation with a blank market value shows "Please enter an amount (numbers only)." and stores no valuation
+  - Scenario S158: Adding a valuation of the liability "Mortgage loan" worth 290.000.000 stores it without an acquisition value
+  - Scenario S159: Adding a valuation of a goldbar at 2,5 grams and 1.600.000 per gram stores a market value of 4.000.000
+- Rule R68: "Edit" and "Delete" change one valuation, and the asset takes its latest remaining valuation
+  - Scenario S161: Saving the market value 13.000.000 on an edited valuation stores 13000000 on the same valuation and adds no valuation
+  - Scenario S162: Deleting the latest valuation of "Savings account" lists it on the Assets page at the value of the valuation before it
+  - Scenario S163: Deleting the only valuation of an asset removes the asset from the Assets page
+- Rule R69: A valuation from an asset sale changes with its sale on the Records page alone
+  - Scenario S164: The valuation of 0 from a sale of "Car" reads "Sold", without "Edit" or "Delete"
+
+### Feature F23: Asset details
+- Rule R70: Editing an asset's name, class, source of fund, or term changes it for every valuation of the asset
+  - Scenario S165: Renaming "Savings account" to "BCA savings" lists every valuation of it under "BCA savings" on the Records page (happy path)
+  - Scenario S166: Renaming an asset to the name of another asset of the account, ignoring case, shows "Another asset has that name." and keeps the name
 
 ## Area A7: App › Records
 
@@ -129,10 +170,10 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S92: The Records page reads "Nothing here yet." for an account without entries
 
 ### Feature F17: Record editing
-- Rule R44: "Edit" opens the entry on the Add page, and saving replaces it
+- Rule R44: "Edit" opens an income or an expense on the Add page and an asset's valuation on its asset page, and saving replaces it
   - Scenario S94: Choosing "Edit" on an expense opens the Add page with its type, date, amount, currency, category, expense type, owner, and note filled, and the button reads "Save changes" (happy path)
   - Scenario S95: Saving the amount 75.000 on an edited expense stores 75000 on the same entry, adds no entry, and opens `/records`
-  - Scenario S96: Saving the value 13.000.000 on an edited asset stores 13000000 on the same asset and adds no asset
+  - Scenario S96: Choosing "Edit" on an asset opens that valuation for editing on the asset's page
   - Scenario S97: "Cancel edit" opens `/records` and leaves the entry unchanged
   - Scenario S98: Saving changes to an entry of another account leaves that entry unchanged
 

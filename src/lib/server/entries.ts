@@ -7,7 +7,7 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' | 'weight' | 'price' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'market' | 'name' | 'currency' | 'asset' | 'weight' | 'price' };
 
 type Added = { added: true };
 
@@ -45,16 +45,25 @@ function parseGold(fields: EntryFields): Refusal | Gold {
 	return { weight, price };
 }
 
-function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
+export function assetNamed(db: Db, userId: number, name: string) {
+	return db.prepare('SELECT 1 FROM assets WHERE user_id = ? AND name = ? COLLATE NOCASE').get(userId, name) !== undefined;
+}
+
+function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null, newAsset: boolean): Refusal | Added {
 	const name = field(fields, 'name');
 	if (!name) return { message: 'Please enter a name for the asset.', field: 'name' };
+	if (newAsset && assetNamed(db, userId, name)) {
+		return { message: 'That asset exists. Add a valuation on the Assets page.', field: 'name' };
+	}
 	const cls = field(fields, 'cls');
 	const liability = cls === 'Liability';
 	const gold = cls === 'Goldbar' ? parseGold(fields) : null;
 	if (gold && 'message' in gold) return gold;
+	const market = newAsset && !liability && !gold && field(fields, 'market') ? parseAmount(field(fields, 'market')) : common.amount;
+	if (market === null) return { message: 'Please enter the market value (numbers only).', field: 'market' };
 	const acquisition = liability
 		? null
-		: gold
+		: gold || newAsset
 			? common.amount
 			: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
 	db.prepare(
@@ -66,7 +75,7 @@ function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, i
 		common.date,
 		name,
 		cls,
-		gold ? gold.weight * gold.price : common.amount,
+		gold ? gold.weight * gold.price : market,
 		common.currency,
 		liability ? null : field(fields, 'source'),
 		liability ? field(fields, 'term') : null,
@@ -131,11 +140,11 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 	return { added: true };
 }
 
-function insert(db: Db, userId: number, fields: EntryFields, id: number | null): Refusal | Added {
+function insert(db: Db, userId: number, fields: EntryFields, id: number | null, newAsset = false): Refusal | Added {
 	const common = parseCommon(fields);
 	if ('message' in common) return common;
 	return fields.type === 'asset'
-		? addAsset(db, userId, fields, common, id)
+		? addAsset(db, userId, fields, common, id, newAsset)
 		: addIncomeOrExpense(db, userId, fields, common, id);
 }
 
@@ -149,8 +158,8 @@ class Refused extends Error {
 	}
 }
 
-export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal | Added | { missing: true } {
-	if (!fields.id) return addEntry(db, userId, fields);
+export function saveEntry(db: Db, userId: number, fields: EntryFields, newAsset = true): Refusal | Added | { missing: true } {
+	if (!fields.id) return insert(db, userId, fields, null, newAsset);
 	const old = recordKey(fields.id);
 	if (!old || !db.prepare(`SELECT 1 FROM ${old.table} WHERE id = ? AND user_id = ?`).get(old.id, userId)) {
 		return { missing: true };
@@ -159,7 +168,7 @@ export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal 
 	try {
 		return db.transaction(() => {
 			db.prepare(`DELETE FROM ${old.table} WHERE id = ?`).run(old.id);
-			const result = insert(db, userId, fields, table === old.table ? old.id : null);
+			const result = insert(db, userId, fields, table === old.table ? old.id : null, newAsset);
 			if ('message' in result) throw new Refused(result);
 			return result;
 		})();

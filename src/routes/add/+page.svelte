@@ -10,10 +10,10 @@
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { group, parseAmount, regroup, sizeOf } from '#lib/amount.ts';
 	import { capitalize, sale } from '#lib/category.ts';
-	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
-	import { Calendar } from '#lib/components/ui/calendar/index.js';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
-	import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
+	import { assetClasses, fundSources, liabilityTerms } from '#lib/asset.ts';
+	import { slashDate } from '#lib/date.ts';
+	import DateField from '#lib/DateField.svelte';
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import type { PageProps } from './$types';
 
 	type Kind = 'income' | 'expense' | 'asset';
@@ -35,9 +35,6 @@
 	};
 	const expenseTypes = ['Fixed - Essential', 'Non-fixed - Essential', 'Fixed - Non-essential', 'Non-fixed - Non-essential'];
 	const owners = ['Personal', 'Spouse', 'Children', 'Family', 'Extended Family'];
-	const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other', 'Liability'];
-	const sources = ['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Debt'];
-	const terms = ['Short term', 'Long term'];
 	const types: [Kind, string][] = [
 		['income', 'Income'],
 		['expense', 'Expense'],
@@ -51,8 +48,6 @@
 
 	const kept = $derived(form?.values ?? editing ?? {});
 	let date = $state(sent?.date ?? slashDate(today(getLocalTimeZone())));
-	let calendarOpen = $state(false);
-	const picked = $derived(isoDate(date) ? parseDate(isoDate(date)!) : undefined);
 	let type = $state((sent?.type ?? 'income') as Kind);
 	let cls = $state(sent?.cls ?? 'Cash');
 	const liability = $derived(type === 'asset' && cls === 'Liability');
@@ -146,7 +141,7 @@
 	</div>
 
 	<div class="flex flex-col gap-1.5">
-		<Label for="amount" class="text-muted-foreground">{gold ? 'Purchase value (total cost)' : type === 'asset' ? 'Current value' : 'Amount'}</Label>
+		<Label for="amount" class="text-muted-foreground">{gold ? 'Purchase value (total cost)' : liability ? 'Current value' : type === 'asset' ? 'Acquisition value (total cost)' : 'Amount'}</Label>
 		<div
 			class={[
 				'flex items-baseline gap-2 border-b-2 pb-1 focus-within:border-ring',
@@ -216,38 +211,7 @@
 	<div class="grid gap-4 md:grid-cols-2">
 		<div class="flex flex-col gap-1.5">
 			<Label for="date">Date</Label>
-			<div class="flex gap-2">
-				<Input
-					id="date"
-					name="date"
-					inputmode="numeric"
-					autocomplete="off"
-					placeholder="YYYY/MM/DD"
-					bind:value={date}
-					oninput={(event) => (date = groupDate(event.currentTarget.value))}
-					{...flagged('date')}
-					class={field}
-				/>
-				<Popover.Root bind:open={calendarOpen}>
-					<Popover.Trigger>
-						{#snippet child({ props })}
-							<Button {...props} variant="outline" size="icon" class="size-11 shrink-0" aria-label="Open calendar">
-								<CalendarIcon class="size-4" />
-							</Button>
-						{/snippet}
-					</Popover.Trigger>
-					<Popover.Content class="w-auto p-0" align="end">
-						<Calendar
-							type="single"
-							value={picked}
-							onValueChange={(value) => {
-								if (value) date = slashDate(value);
-								calendarOpen = false;
-							}}
-						/>
-					</Popover.Content>
-				</Popover.Root>
-			</div>
+			<DateField bind:value={date} {...flagged('date')} />
 		</div>
 
 		{#if type === 'asset'}
@@ -265,15 +229,15 @@
 			<div class="flex flex-col gap-1.5">
 				<Label for="class">Class</Label>
 				<select id="class" name="cls" bind:value={cls} class={select}>
-					{#each classes as option (option)}
+					{#each assetClasses as option (option)}
 						<option>{option}</option>
 					{/each}
 				</select>
 			</div>
 			{#if liability}
-				{@render choice('term', 'term', 'Liability term', terms, kept.term ?? 'Long term')}
+				{@render choice('term', 'term', 'Liability term', liabilityTerms, kept.term ?? 'Long term')}
 			{:else}
-				{@render choice('source', 'source', 'Source of fund', sources, kept.source)}
+				{@render choice('source', 'source', 'Source of fund', fundSources, kept.source)}
 				{#if gold}
 					<div class="flex flex-col gap-1.5">
 						<Label for="weight">Weight (grams)</Label>
@@ -306,16 +270,15 @@
 					</p>
 				{:else}
 					<div class="flex flex-col gap-1.5 md:col-span-2">
-						<Label for="acquisition" class="leading-snug">
-							Acquisition value (total cost) – blank = keep previous
-						</Label>
+						<Label for="market" class="leading-snug">Market value – blank = same as cost</Label>
 						<Input
-							id="acquisition"
-							name="acquisition"
+							id="market"
+							name="market"
 							inputmode="decimal"
 							autocomplete="off"
-							value={kept.acquisition ?? ''}
+							value={kept.market ?? ''}
 							oninput={(event) => regroup(event.currentTarget)}
+							{...flagged('market')}
 							class={field}
 						/>
 					</div>

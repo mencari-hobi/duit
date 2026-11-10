@@ -66,3 +66,12 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F20
 - S123: screen, server, auth, db
+
+## F21
+- S144: screen, server, auth, db
+
+## F22
+- S154: screen, server, auth, db
+
+## F23
+- S165: screen, server, auth, db
