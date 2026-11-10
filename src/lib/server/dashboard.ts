@@ -23,14 +23,14 @@ type Holding = {
 };
 
 const classes = ['Cash', 'Investments', 'Property', 'Other'];
-const expenseTypes = [
+export const expenseTypes = [
 	'Fixed - Essential',
 	'Non-fixed - Essential',
 	'Fixed - Non-essential',
 	'Non-fixed - Non-essential'
 ];
 
-function monthOf(date: string, startDay: number) {
+export function monthOf(date: string, startDay: number) {
 	let [year, month] = date.split('-').map(Number);
 	if (startDay > 1 && Number(date.slice(8, 10)) >= startDay) month++;
 	if (month > 12) [year, month] = [year + 1, 1];
@@ -43,8 +43,8 @@ const change = (now: number, before: number) => (before ? ((now - before) * 100)
 
 type Monthly<T> = T & { month: string };
 
-function latestHoldings(updates: Monthly<Holding>[], month: string) {
-	const latest = new Map<string, Holding>();
+export function latestHoldings<T extends { name: string; month: string }>(updates: T[], month: string) {
+	const latest = new Map<string, T>();
 	for (const row of updates.filter((row) => row.month <= month)) latest.set(row.name, row);
 	return [...latest.values()];
 }

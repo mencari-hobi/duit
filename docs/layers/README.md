@@ -60,3 +60,6 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F18
 - S99: screen, server, auth, db
+
+## F19
+- S105: screen, server, auth, db
