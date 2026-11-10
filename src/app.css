@@ -80,6 +80,10 @@
 		@apply min-h-dvh bg-background font-sans text-foreground antialiased;
 	}
 
+	option {
+		@apply bg-popover text-popover-foreground;
+	}
+
 	h1,
 	h2,
 	h3 {

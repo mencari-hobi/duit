@@ -1,4 +1,5 @@
 import { parseAmount } from '#lib/amount.ts';
+import { sale } from '#lib/category.ts';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
 import { recordKey } from './records';
@@ -6,7 +7,7 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' };
 
 type Added = { added: true };
 
@@ -61,8 +62,41 @@ function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, i
 	return { added: true };
 }
 
-function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Added {
+type Holding = { name: string; class: string; value: number; currency: string; source: string | null };
+
+function latestHoldings(db: Db, userId: number) {
+	const rows = db
+		.prepare('SELECT name, class, value, currency, source FROM assets WHERE user_id = ? ORDER BY date, id')
+		.all(userId) as Holding[];
+	const latest = new Map(rows.map((row) => [row.name, row]));
+	return [...latest.values()].filter((row) => row.class !== 'Liability' && row.value > 0);
+}
+
+export function heldAssets(db: Db, userId: number) {
+	return latestHoldings(db, userId)
+		.map((row) => row.name)
+		.sort();
+}
+
+function addSale(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
+	const sold = latestHoldings(db, userId).find((row) => row.name === field(fields, 'asset'));
+	if (!sold) return { message: 'Choose the asset that was sold.', field: 'asset' };
+	const entry = db
+		.prepare(
+			`INSERT INTO entries (id, user_id, kind, date, amount, currency, category, note)
+			VALUES (?, ?, 'income', ?, ?, ?, ?, ?)`
+		)
+		.run(id, userId, common.date, common.amount, common.currency, sale, common.note || `Sale of ${sold.name}`);
+	db.prepare(
+		`INSERT INTO assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id)
+		VALUES (?, ?, ?, ?, 0, ?, ?, 0, '', ?)`
+	).run(userId, common.date, sold.name, sold.class, sold.currency, sold.source, entry.lastInsertRowid);
+	return { added: true };
+}
+
+function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
 	const expense = fields.type === 'expense';
+	if (!expense && field(fields, 'category').toLowerCase() === sale) return addSale(db, userId, fields, common, id);
 	db.prepare(
 		`INSERT INTO entries (id, user_id, kind, date, amount, currency, category, expense_type, owner, note)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`

@@ -289,3 +289,23 @@ test('an invalid from date leaves the range open and comes back blank', () => {
 	expect(dashboard.from).toBe('');
 	expect(dashboard.months.map((row) => row.month)).toEqual(['2026/10', '2026/11']);
 });
+
+test(
+	'a salary of 10.000.000 and a sale of 150.000.000 in 2026/11 read income 10.000.000 on the card and on the chart',
+	{ meta: { scenario: 'S131' } },
+	() => {
+		asset('2026/10/01', 'Car', '150.000.000', { cls: 'Other' });
+		income('2026/11/05', '10.000.000');
+		addEntry(db, alice, {
+			type: 'income',
+			date: '2026/11/06',
+			amount: '150.000.000',
+			currency: 'IDR',
+			category: 'sales of asset',
+			asset: 'Car'
+		});
+
+		expect(board().cards).toMatchObject({ income: 10000000 });
+		expect(board().months.at(-1)).toMatchObject({ month: '2026/11', income: 10000000 });
+	}
+);

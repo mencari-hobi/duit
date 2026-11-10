@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 import { register } from './auth';
 import { openDatabase, type Db } from './db';
-import { addEntry, entryCategories } from './entries';
+import { addEntry, entryCategories, heldAssets, saveEntry } from './entries';
 
 let db: Db;
 let alice: number;
@@ -263,5 +263,60 @@ test(
 
 		expect(result).toEqual({ message: 'Please pick a date.', field: 'date' });
 		expect(entryRows()).toEqual([]);
+	}
+);
+
+const sale = (fields: Record<string, string> = {}) =>
+	income({ date: '2026-11-03', amount: '150.000.000', category: 'sales of asset', asset: 'Car', ...fields });
+
+test('a sale with a blank note stores the note "Sale of Car"', { meta: { scenario: 'S124' } }, () => {
+	addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
+
+	addEntry(db, alice, sale());
+
+	expect(entryRows()).toEqual([expect.objectContaining({ category: 'sales of asset', note: 'Sale of Car' })]);
+});
+
+test(
+	'the held assets list each asset whose latest value is above 0, and no liability',
+	{ meta: { scenario: 'S125' } },
+	() => {
+		addEntry(db, alice, asset({ name: 'Savings account' }));
+		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
+		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', amount: '0' }));
+		addEntry(db, alice, asset({ name: 'Bond', cls: 'Investments', date: '2026-10-01', amount: '0' }));
+		addEntry(db, alice, asset({ name: 'Bond', cls: 'Investments', amount: '5.000.000' }));
+		addEntry(db, alice, asset({ name: 'Mortgage loan', cls: 'Liability', term: 'Long term' }));
+
+		expect(heldAssets(db, alice)).toEqual(['Bond', 'Savings account']);
+	}
+);
+
+test(
+	'adding a sale without a chosen asset shows "Choose the asset that was sold." and stores nothing',
+	{ meta: { scenario: 'S127' } },
+	() => {
+		const result = addEntry(db, alice, sale({ asset: '' }));
+
+		expect(result).toEqual({ message: 'Choose the asset that was sold.', field: 'asset' });
+		expect(entryRows()).toEqual([]);
+		expect(assetRows()).toEqual([]);
+	}
+);
+
+test(
+	'saving the date 2026/11/10 on an edited sale of car leaves one update of car worth 0 dated 2026/11/10',
+	{ meta: { scenario: 'S129' } },
+	() => {
+		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
+		addEntry(db, alice, sale());
+		const id = `e${(entryRows()[0] as { id: number }).id}`;
+
+		saveEntry(db, alice, sale({ id, date: '2026-11-10' }));
+
+		expect(assetRows().filter((row) => row.value === 0)).toEqual([
+			expect.objectContaining({ name: 'Car', date: '2026-11-10', value: 0 })
+		]);
+		expect(entryRows()).toHaveLength(1);
 	}
 );

@@ -42,3 +42,7 @@ Every intent behind the work of the project, in the order the definitions record
 - Why: The user follows the mockup to its last menu, after the Records page
 - Serves: F19
 - Not: a "Swipe for more" text hint, since the user wants a fade that shows the table scrolls
+
+## Intent I11: Selling an asset turns it into cash without counting the proceeds as earnings
+- Why: The user wants to record a sale by picking the sold asset from the assets they still hold
+- Serves: F20, R57, R58, S122
