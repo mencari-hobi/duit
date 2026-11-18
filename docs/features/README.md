@@ -22,6 +22,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S104: On a 360 px wide screen, `/records` with entries fits the screen width
   - Scenario S120: On a 360 px wide screen, `/snapshot` with three months of entries fits the screen width
   - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
+  - Scenario S211: On a 360 px wide screen, `/diary` on the Asset list with an asset fits the screen width
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -64,6 +65,9 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R63: The database names its tables after the menu, and an upgrade keeps every stored row
   - Scenario S148: A new database has the tables `diary_entries`, `diary_assets`, and `plan_entries`, and lacks `entries` and `assets` (happy path)
   - Scenario S149: Opening a database with rows in `entries` and `assets` moves every row into `diary_entries` and `diary_assets`, and a sale keeps the link to its asset's 0 update
+- Rule R84: An upgrade moves each asset to a spec type and gives it a code
+  - Scenario S209: Opening a database with "Investments", "Goldbar", and "Property" assets moves them to "Mutual Fund", "Gold", and "Property & Land"
+  - Scenario S210: Opening a database with the assets "Savings account" and "Car" codes them "AST-0001" and "AST-0002" by first date, and every update of an asset shares its code
 
 ## Area A6: App › Financial Diary
 
@@ -116,23 +120,39 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S129: Saving the date 2026/11/10 on an edited sale of "Car" leaves one update of "Car" worth 0, dated 2026/11/10
   - Scenario S130: Deleting a sale of "Car" removes the 0 update of "Car", and "Car" returns to the "Asset sold" list
 
-### Feature F11: Asset and liability entries
-- Rule R25: An asset or a liability added on the Financial Diary page stays with the account
-  - Scenario S47: Adding the asset "Savings account" of the class "Cash", worth 12000000 and funded by "Salary", stores that asset for the account and shows "Added ✓" (happy path)
-  - Scenario S48: Adding the liability "Mortgage loan", worth 300000000 with the term "Long term", stores a liability without a source of fund
-  - Scenario S49: Adding an asset with a blank name shows "Please enter a name for the asset." and stores nothing
-  - Scenario S55: Adding the asset "Dollar savings" with "USD" picked beside the amount stores "USD" as the asset's currency
-  - Scenario S59: Adding the asset "Savings account" with the note "BCA" stores the note "BCA"
-- Rule R59: A goldbar takes its purchase value as the amount, and its value is its weight times the market price per gram
-  - Scenario S137: Adding the goldbar "Antam", 2,5 grams at 1.500.000 per gram and bought for 3.000.000, stores a value of 3.750.000 and an acquisition value of 3.000.000
-  - Scenario S138: Adding a goldbar without a weight shows "Please enter the weight in grams (numbers only)." and stores no asset
-  - Scenario S139: Editing that goldbar fills the purchase value 3.000.000, the weight 2,5, and the market price per gram 1.500.000
-- Rule R26: A blank acquisition value falls back to the asset's last acquisition value, or to its value on a first entry
-  - Scenario S50: Adding a first "Savings account" with a blank acquisition value stores its value as the acquisition value
-  - Scenario S51: Adding "Savings account" again with a blank acquisition value stores the acquisition value of its last entry
-- Rule R28: The acquisition value groups thousands with a dot as the user types, like the amount
-  - Scenario S60: Typing 12500000 into the acquisition value shows "12.500.000"
-  - Scenario S61: Adding an asset with the acquisition value "12.500.000" stores 12500000
+### Feature F11: Asset purchases
+- Rule R25: A purchase saved on the Asset tab stays with the account under a new asset code
+  - Scenario S47: Saving a "Gold" purchase dated 2026/11/12, funded by "Bonus", of 25 gr for 62.500.000 with the note "Antam bar" stores "AST-0001" valued at its acquisition cost 62500000, and shows "Saved AST-0001 ✓" (happy path)
+  - Scenario S191: A second purchase gets "AST-0002", while another account's first purchase gets "AST-0001"
+  - Scenario S49: Saving a purchase with a blank acquisition cost shows "Please enter the acquisition cost (numbers only)." and stores nothing
+  - Scenario S192: Saving a purchase with a blank unit shows "Please enter the unit (numbers only)." and stores nothing
+  - Scenario S55: A "Foreign Exchanges" purchase of 2.000 "USD" stores the unit 2000 in "USD", and the acquisition cost in the default currency
+- Rule R77: The unit follows the asset type
+  - Scenario S193: The unit reads "Unit (gr)" for "Gold", "Unit (sqm)" for "Property & Land", "Unit (lot)" for "Stock", "Unit (unit)" for "Mutual Fund" and "Other", and takes a currency for "Cash", "Term Deposit", "Foreign Exchanges", and "Bond"
+  - Scenario S194: An acquisition cost of 62.500.000 for 25 gr reads "IDR 2.500.000 per gr" under "Cost / unit"
+- Rule R78: The Purchase lists follow the spec
+  - Scenario S195: "Asset type" lists "Cash", "Term Deposit", "Foreign Exchanges", "Mutual Fund", "Bond", "Stock", "Gold", "Property & Land", and "Other", and "Source" lists "Salary", "Freelance", "Dividend", "Bonus", "Other", and "Debt"
+- Rule R79: Editing a purchase changes its asset across every update
+  - Scenario S196: Choosing "Edit" on the purchase of "AST-0001" in Records opens the Purchase form filled, with a "Save changes" button
+  - Scenario S197: Saving the type "Mutual Fund" on that purchase moves every update of "AST-0001" to "Mutual Fund"
+  - Scenario S198: Deleting the purchase of "AST-0001" removes every update of "AST-0001"
+
+### Feature F25: Asset list and updates
+- Rule R80: The Asset list shows each held asset with its latest value and its gain or loss over cost
+  - Scenario S199: "AST-0001" bought for 62.500.000 and last valued at 68.000.000 reads "AST-0001 · Antam bar", "Gold", "25 gr", "2026/11/12", "62.500.000", "68.000.000", and "+5.500.000" (happy path)
+  - Scenario S200: A sold asset and a liability stay out of the Asset list
+  - Scenario S201: The total row reads the summed acquisition cost, market value, and gain, with the gain's share of cost, e.g. "+5.500.000 (8.8%)"
+  - Scenario S202: Filtering by "Gold" hides the other asset types
+- Rule R81: "Save updates" adds a valuation for each asset whose market value is filled, dated its "Value as of"
+  - Scenario S203: Saving 70.000.000 as of 2026/11/30 for "AST-0001" adds an update of "AST-0001" dated 2026/11/30 worth 70000000, and keeps its earlier updates
+  - Scenario S204: A row with a blank market value adds no update
+  - Scenario S205: Saving a second value for the same asset and date replaces that date's update
+- Rule R82: An account without held assets reads "No assets yet. Save a purchase first."
+  - Scenario S206: A new account's Asset list reads "No assets yet. Save a purchase first."
+
+### Feature F26: Liabilities
+- Rule R83: A liability added on the Debt tab stays with the account
+  - Scenario S48: Adding the liability "Mortgage loan" on the Debt tab, worth 300000000 with the term "Long term", stores a liability without a source of fund (happy path)
 
 ## Area A9: App › Financial Plan
 
@@ -201,7 +221,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R43: The records list shows every entry of the account, newest first
   - Scenario S87: An expense dated 2026/11/02 and an asset dated 2026/11/05 list the asset first, each with its date as YYYY/MM/DD, its type, and its amount (happy path)
   - Scenario S88: An income under "salary" lists as "Salary", with "–" for the expense type and the owner
-  - Scenario S89: An asset lists with its class, its source, and its cost, e.g. "Savings account (Cash) · funded by Salary · cost 12.000.000"
+  - Scenario S89: An asset update lists its code, name, type, source, and cost, e.g. "AST-0001 · Antam bar (Gold) · funded by Bonus · cost 62.500.000"
   - Scenario S90: An amount of 1250000 in "USD" lists as "1.250.000" beside "USD"
   - Scenario S91: The entries of another account stay out of the list
   - Scenario S92: The Records page reads "Nothing here yet." for an account without entries
@@ -210,8 +230,9 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R44: "Edit" opens the entry on the Financial Diary page, and saving replaces it
   - Scenario S94: Choosing "Edit" on an expense opens the Financial Diary page with its type, date, amount, currency, category, expense type, owner, and note filled, and the button reads "Save changes" (happy path)
   - Scenario S95: Saving the amount 75.000 on an edited expense stores 75000 on the same entry, adds no entry, and opens `/records`
-  - Scenario S96: Saving the value 13.000.000 on an edited asset stores 13000000 on the same asset and adds no asset
+  - Scenario S96: Saving the acquisition cost 13.000.000 on an edited purchase stores 13000000 on the same asset and adds no asset
   - Scenario S97: "Cancel edit" opens `/records` and leaves the entry unchanged
+  - Scenario S208: Choosing "Edit" on an asset update opens the Asset list of the Financial Diary
   - Scenario S98: Saving changes to an entry of another account leaves that entry unchanged
 
 ### Feature F18: Record deletion
@@ -238,8 +259,9 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S133: A salary of 8.000.000 and a sale of 50.000.000 in 2026/11 read "Total Income" 8,00 and "Sales of Asset (memo, not counted as income)" 50,00
   - Scenario S134: Three reporting months without a sale leave out the memo line
 - Rule R49: The asset section splits assets into liquid and non-liquid, then compares them with their acquisition value and the liabilities
-  - Scenario S111: A "Cash" asset of 6.000.000 and a "Property" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Total Assets (market value)" 8,00
-  - Scenario S135: A "Cash" asset of 6.000.000 and a "Goldbar" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Goldbar" 2,00
+  - Scenario S111: A "Cash" asset of 6.000.000 and a "Property & Land" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Total Assets (market value)" 8,00
+  - Scenario S135: A "Cash" asset of 6.000.000 and a "Gold" asset of 2.000.000 read "Liquid assets" 6,00, "Non-liquid assets" 2,00, and "Gold" 2,00
+  - Scenario S207: "Term Deposit", "Foreign Exchanges", and "Mutual Fund" assets of 1.000.000 each read "Liquid assets" 3,00
   - Scenario S112: An asset worth 12.000.000 with an acquisition value of 10.000.000 reads "Acquisition value" 10,00, "Capital gain (market − acquisition)" 2,00, and "Capital gain % of acquisition value" 20.0%
   - Scenario S113: Liabilities of 1.000.000 "Short term" and 2.000.000 "Long term" against assets of 8.000.000 read "Liabilities" 3,00, split by term, and "Net Worth (assets − liabilities)" 5,00
 - Rule R50: The ratios section shows nine ratios of the month
@@ -312,8 +334,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R38: Net worth growth shows each month's liabilities, equity, and net worth
   - Scenario S80: Assets of 15.000.000 and liabilities of 3.000.000 in 2026/11 give liabilities 3.000.000, equity 12.000.000, and net worth 12.000.000 for that month
 - Rule R39: Asset movement by type stacks each month's asset value by class, each labeled with its share of the assets
-  - Scenario S81: A "Cash" asset of 6.000.000 and a "Property" asset of 2.000.000 in 2026/11 stack as 75% and 25%
-  - Scenario S136: A "Cash" asset of 6.000.000 and a "Goldbar" asset of 2.000.000 in 2026/11 stack as 75% and 25%
+  - Scenario S81: A "Cash" asset of 6.000.000 and a "Property & Land" asset of 2.000.000 in 2026/11 stack as 75% and 25%
+  - Scenario S136: A "Cash" asset of 6.000.000 and a "Gold" asset of 2.000.000 in 2026/11 stack as 75% and 25%
 - Rule R40: The assets and liabilities table lists each asset with its latest value and its change from the update before
   - Scenario S82: "Savings account" updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000
 

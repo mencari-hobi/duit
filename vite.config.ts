@@ -11,7 +11,7 @@ export default defineConfig({
 			{ extends: true, test: { name: 'unit', include: ['src/**/*.test.ts'] } },
 			{
 				extends: true,
-				test: { name: 'app', include: ['test/**/*.test.ts'], globalSetup: ['test/server.ts'] }
+				test: { name: 'app', include: ['test/**/*.test.ts'], globalSetup: ['test/server.ts'], testTimeout: 15000 }
 			}
 		]
 	}

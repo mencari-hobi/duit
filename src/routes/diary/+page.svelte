@@ -9,16 +9,23 @@
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import AmountField from '#lib/AmountField.svelte';
-	import { group, parseAmount, regroup } from '#lib/amount.ts';
 	import { capitalize, expenseDefaults, expenseTypes, owners, sale } from '#lib/category.ts';
-	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
-	import { Calendar } from '#lib/components/ui/calendar/index.js';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
-	import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
+	import { slashDate } from '#lib/date.ts';
+	import { getLocalTimeZone, today } from '@internationalized/date';
+	import AssetList from '#lib/AssetList.svelte';
+	import AssetPurchase from '#lib/AssetPurchase.svelte';
+	import DateField from '#lib/DateField.svelte';
 	import type { PageProps } from './$types';
 
-	type Kind = 'income' | 'expense' | 'asset';
-	type Form = { added?: boolean; error?: string; field?: string; values?: Record<string, string> } | null;
+	type Kind = 'income' | 'expense' | 'asset' | 'debt';
+	type Form = {
+		added?: boolean;
+		saved?: string;
+		updated?: number;
+		error?: string;
+		field?: string;
+		values?: Record<string, string>;
+	} | null;
 
 	let { data, form: action }: PageProps = $props();
 	const form = $derived(action as Form);
@@ -29,40 +36,33 @@
 		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
 		expense: Object.keys(expenseDefaults)
 	};
-	const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other', 'Liability'];
-	const sources = ['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Debt'];
 	const terms = ['Short term', 'Long term'];
 	const types: [Kind, string][] = [
 		['income', 'Income'],
 		['expense', 'Expense'],
-		['asset', 'Asset / Liability']
+		['asset', 'Asset'],
+		['debt', 'Debt']
 	];
 	const tint: Record<Kind, string> = {
 		income: 'has-checked:bg-in-muted has-checked:text-in',
 		expense: 'has-checked:bg-out-muted has-checked:text-out',
-		asset: 'has-checked:bg-chart-5/15 has-checked:text-chart-5'
+		asset: 'has-checked:bg-chart-5/15 has-checked:text-chart-5',
+		debt: 'has-checked:bg-chart-4/15 has-checked:text-chart-4'
 	};
+	const views = [
+		['purchase', 'Purchase'],
+		['list', 'Asset list & update']
+	];
 
 	const kept = $derived(form?.values ?? editing ?? {});
-	let date = $state(sent?.date ?? slashDate(today(getLocalTimeZone())));
-	let calendarOpen = $state(false);
-	const picked = $derived(isoDate(date) ? parseDate(isoDate(date)!) : undefined);
-	let type = $state((sent?.type ?? 'income') as Kind);
-	let cls = $state(sent?.cls ?? 'Cash');
-	const liability = $derived(type === 'asset' && cls === 'Liability');
-	const gold = $derived(type === 'asset' && cls === 'Goldbar');
-	let weight = $state(sent?.weight ?? '');
-	let price = $state(sent?.price ?? '');
-	const market = $derived.by(() => {
-		const grams = parseAmount(weight);
-		const perGram = parseAmount(price);
-		return grams === null || perGram === null ? null : group(String(Math.round(grams * perGram)));
-	});
-	const sign = $derived(type === 'expense' ? '−' : '+');
-	const signColor = $derived(type === 'income' ? 'text-in' : type === 'expense' ? 'text-out' : 'text-chart-5');
+	const day = slashDate(today(getLocalTimeZone()));
+	let date = $state(sent?.date ?? day);
+	let type = $state((sent?.type ?? untrack(() => data.tab)) as Kind);
+	const sign = $derived(type === 'income' ? '+' : '−');
+	const signColor = $derived(type === 'income' ? 'text-in' : type === 'expense' ? 'text-out' : 'text-chart-4');
 
 	const list = $derived(
-		type === 'asset' ? [] : [...new Set([...defaults[type], ...data.categories[type]])]
+		type === 'income' || type === 'expense' ? [...new Set([...defaults[type], ...data.categories[type]])] : []
 	);
 	let category = $derived((kept.type === type && kept.category) || list[0]);
 	let lastType = untrack(() => kept.expenseType) || expenseTypes[0];
@@ -70,9 +70,7 @@
 		lastType = (category === kept.category && kept.expenseType) || expenseDefaults[category] || lastType;
 		return lastType;
 	});
-	const held = $derived(
-		[...new Set([...data.held, ...(editing?.asset ? [editing.asset] : [])])].sort()
-	);
+	const held = $derived(data.held);
 	let open = $state(false);
 	let search = $state('');
 	const typed = $derived(search.trim().toLowerCase());
@@ -108,9 +106,8 @@
 	</div>
 {/snippet}
 
-<form method="POST" novalidate class="flex w-full max-w-2xl flex-col gap-5">
+<div class="flex w-full max-w-2xl flex-col gap-5">
 	{#if editing}
-		<input type="hidden" name="id" value={editing.id} />
 		<div class="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 py-1 pr-1 pl-3 text-sm">
 			<span>Editing the {editing.type} of <span class="tabular-nums">{editing.date}</span></span>
 			<Button href="/records" variant="ghost" class="h-11 px-3 text-base text-primary">Cancel edit</Button>
@@ -127,15 +124,61 @@
 						tint[value]
 					]}
 				>
-					<input class="sr-only" type="radio" name="type" {value} bind:group={type} />
+					<input class="sr-only" type="radio" name="tab" {value} bind:group={type} />
 					{label}
 				</label>
 			{/each}
 		</fieldset>
 	</div>
 
+	{#if type === 'asset'}
+		{#if !editing}
+			<nav aria-label="Asset views" class="flex gap-4 border-b">
+				{#each views as [value, label] (value)}
+					<a
+						href="/diary?tab=asset&view={value}"
+						aria-current={data.view === value ? 'page' : undefined}
+						class={[
+							'-mb-px border-b-2 px-1 pb-2 text-base font-medium no-underline hover:no-underline',
+							data.view === value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+						]}
+					>
+						{label}
+					</a>
+				{/each}
+			</nav>
+		{/if}
+		{#if data.view === 'list' && !editing}
+			<AssetList
+				list={data.assets}
+				filter={data.filter}
+				currency={data.settings!.currency}
+				today={day}
+				error={form?.error}
+				invalid={form?.field}
+				updated={form?.updated}
+			/>
+		{:else}
+			<AssetPurchase
+				kept={kept}
+				editing={!!editing}
+				currency={data.settings!.currency}
+				today={day}
+				nextCode={data.nextCode}
+				error={form?.error}
+				invalid={form?.field}
+				saved={form?.saved}
+			/>
+		{/if}
+	{:else}
+	<form method="POST" novalidate class="flex flex-col gap-5">
+	<input type="hidden" name="type" value={type} />
+	{#if editing}
+		<input type="hidden" name="id" value={editing.id} />
+	{/if}
+
 	<AmountField
-		label={gold ? 'Purchase value (total cost)' : type === 'asset' ? 'Current value' : 'Amount'}
+		label="Amount"
 		{sign}
 		{signColor}
 		bind:amount
@@ -144,113 +187,21 @@
 	/>
 
 	<div class="grid gap-4 md:grid-cols-2">
-		<div class="flex flex-col gap-1.5">
-			<Label for="date">Date</Label>
-			<div class="flex gap-2">
-				<Input
-					id="date"
-					name="date"
-					inputmode="numeric"
-					autocomplete="off"
-					placeholder="YYYY/MM/DD"
-					bind:value={date}
-					oninput={(event) => (date = groupDate(event.currentTarget.value))}
-					{...flagged('date')}
-					class={field}
-				/>
-				<Popover.Root bind:open={calendarOpen}>
-					<Popover.Trigger>
-						{#snippet child({ props })}
-							<Button {...props} variant="outline" size="icon" class="size-11 shrink-0" aria-label="Open calendar">
-								<CalendarIcon class="size-4" />
-							</Button>
-						{/snippet}
-					</Popover.Trigger>
-					<Popover.Content class="w-auto p-0" align="end">
-						<Calendar
-							type="single"
-							value={picked}
-							onValueChange={(value) => {
-								if (value) date = slashDate(value);
-								calendarOpen = false;
-							}}
-						/>
-					</Popover.Content>
-				</Popover.Root>
-			</div>
-		</div>
+		<DateField id="date" name="date" label="Date" bind:value={date} invalid={form?.field === 'date'} />
 
-		{#if type === 'asset'}
+		{#if type === 'debt'}
 			<div class="flex flex-col gap-1.5">
 				<Label for="name">Name</Label>
 				<Input
 					id="name"
 					name="name"
-					placeholder="e.g. Savings account"
+					placeholder="e.g. Mortgage loan"
 					value={kept.name ?? ''}
 					{...flagged('name')}
 					class={field}
 				/>
 			</div>
-			<div class="flex flex-col gap-1.5">
-				<Label for="class">Class</Label>
-				<select id="class" name="cls" bind:value={cls} class={select}>
-					{#each classes as option (option)}
-						<option>{option}</option>
-					{/each}
-				</select>
-			</div>
-			{#if liability}
-				{@render choice('term', 'term', 'Liability term', terms, kept.term ?? 'Long term')}
-			{:else}
-				{@render choice('source', 'source', 'Source of fund', sources, kept.source)}
-				{#if gold}
-					<div class="flex flex-col gap-1.5">
-						<Label for="weight">Weight (grams)</Label>
-						<Input
-							id="weight"
-							name="weight"
-							inputmode="decimal"
-							autocomplete="off"
-							value={weight}
-							oninput={(event) => (weight = regroup(event.currentTarget))}
-							{...flagged('weight')}
-							class={field}
-						/>
-					</div>
-					<div class="flex flex-col gap-1.5">
-						<Label for="price">Market price per gram</Label>
-						<Input
-							id="price"
-							name="price"
-							inputmode="decimal"
-							autocomplete="off"
-							value={price}
-							oninput={(event) => (price = regroup(event.currentTarget))}
-							{...flagged('price')}
-							class={field}
-						/>
-					</div>
-					<p class="text-muted-foreground md:col-span-2">
-						Market value: <span class="tabular-nums text-foreground">{market ?? '–'}</span>
-					</p>
-				{:else}
-					<div class="flex flex-col gap-1.5 md:col-span-2">
-						<Label for="acquisition" class="leading-snug">
-							Acquisition value (total cost) – blank = keep previous
-						</Label>
-						<Input
-							id="acquisition"
-							name="acquisition"
-							inputmode="decimal"
-							autocomplete="off"
-							value={kept.acquisition ?? ''}
-							oninput={(event) => regroup(event.currentTarget)}
-							class={field}
-						/>
-					</div>
-				{/if}
-			{/if}
+			{@render choice('term', 'term', 'Liability term', terms, kept.term ?? 'Long term')}
 		{:else}
 			<div class="flex flex-col gap-1.5">
 				<Label for="category">Category</Label>
@@ -299,8 +250,8 @@
 				<div class="flex flex-col gap-1.5">
 					<Label for="asset">Asset sold</Label>
 					<select id="asset" name="asset" class={select} {...flagged('asset')}>
-						{#each held as name (name)}
-							<option selected={name === kept.asset}>{name}</option>
+						{#each held as asset (asset.code)}
+							<option value={asset.code} selected={asset.code === kept.asset}>{asset.label}</option>
 						{:else}
 							<option value="">No assets recorded yet</option>
 						{/each}
@@ -341,4 +292,6 @@
 			<p id="message" role="status" class="font-semibold text-in">Added ✓</p>
 		{/if}
 	</div>
-</form>
+	</form>
+	{/if}
+</div>

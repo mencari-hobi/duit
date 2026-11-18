@@ -1,7 +1,9 @@
 import { beforeEach, expect, test } from 'vitest';
 import { register } from './auth';
 import { openDatabase, type Db } from './db';
-import { addEntry, entryCategories, heldAssets, saveEntry } from './entries';
+import { heldAssets } from './assets';
+import { addEntry, entryCategories, saveEntry } from './entries';
+import { recordHolding } from './holdings-fixture';
 
 let db: Db;
 let alice: number;
@@ -47,6 +49,9 @@ const asset = (fields: Record<string, string> = {}) => ({
 	note: '',
 	...fields
 });
+
+const hold = (fields: Record<string, string>) =>
+	recordHolding(db, alice, { date: '2026-11-03', amount: '12.000.000', name: 'Savings account', ...fields });
 
 const entryRows = () => db.prepare('SELECT * FROM diary_entries').all() as Record<string, unknown>[];
 const assetRows = () => db.prepare('SELECT * FROM diary_assets').all() as Record<string, unknown>[];
@@ -153,11 +158,15 @@ test(
 	'adding the liability mortgage loan with a long term stores a liability without a source of fund',
 	{ meta: { scenario: 'S48' } },
 	() => {
-		addEntry(
-			db,
-			alice,
-			asset({ name: 'Mortgage loan', amount: '300.000.000', cls: 'Liability', term: 'Long term' })
-		);
+		addEntry(db, alice, {
+			type: 'debt',
+			date: '2026/11/03',
+			name: 'Mortgage loan',
+			amount: '300.000.000',
+			currency: 'IDR',
+			term: 'Long term',
+			note: ''
+		});
 
 		expect(assetRows()).toEqual([
 			expect.objectContaining({
@@ -168,98 +177,6 @@ test(
 				source: null
 			})
 		]);
-	}
-);
-
-test(
-	'adding a goldbar of 2,5 grams at 1.500.000 per gram bought for 3.000.000 stores a value of 3.750.000 and an acquisition of 3.000.000',
-	{ meta: { scenario: 'S137' } },
-	() => {
-		addEntry(db, alice, asset({ name: 'Antam', cls: 'Goldbar', amount: '3.000.000', weight: '2,5', price: '1.500.000' }));
-
-		expect(assetRows()).toEqual([
-			expect.objectContaining({ class: 'Goldbar', value: 3750000, acquisition: 3000000, weight: 2.5, price: 1500000 })
-		]);
-	}
-);
-
-test(
-	'adding a goldbar without a weight returns the weight message and stores no asset',
-	{ meta: { scenario: 'S138' } },
-	() => {
-		expect(addEntry(db, alice, asset({ cls: 'Goldbar', weight: '', price: '1.500.000' }))).toEqual({
-			message: 'Please enter the weight in grams (numbers only).',
-			field: 'weight'
-		});
-		expect(assetRows()).toEqual([]);
-	}
-);
-
-test('adding a goldbar without a price per gram returns the price message and stores no asset', () => {
-	expect(addEntry(db, alice, asset({ cls: 'Goldbar', weight: '10', price: '' }))).toEqual({
-		message: 'Please enter the market price per gram (numbers only).',
-		field: 'price'
-	});
-	expect(assetRows()).toEqual([]);
-});
-
-test(
-	'adding an asset with a blank name returns the name message and stores no asset',
-	{ meta: { scenario: 'S49' } },
-	() => {
-		const result = addEntry(db, alice, asset({ name: ' ' }));
-
-		expect(result).toEqual({ message: 'Please enter a name for the asset.', field: 'name' });
-		expect(assetRows()).toEqual([]);
-	}
-);
-
-test(
-	'adding the asset dollar savings with USD picked stores USD as its currency',
-	{ meta: { scenario: 'S55' } },
-	() => {
-		addEntry(db, alice, asset({ name: 'Dollar savings', currency: 'USD' }));
-
-		expect(assetRows()[0].currency).toBe('USD');
-	}
-);
-
-test('adding an asset with the note BCA stores the note', { meta: { scenario: 'S59' } }, () => {
-	addEntry(db, alice, asset({ note: 'BCA' }));
-
-	expect(assetRows()[0].note).toBe('BCA');
-});
-
-test(
-	'adding a first savings account with a blank acquisition value stores its value as the acquisition value',
-	{ meta: { scenario: 'S50' } },
-	() => {
-		addEntry(db, alice, asset({ amount: '12.000.000' }));
-
-		expect(assetRows()[0].acquisition).toBe(12000000);
-	}
-);
-
-test(
-	'adding savings account again with a blank acquisition value stores the acquisition value of its last entry',
-	{ meta: { scenario: 'S51' } },
-	() => {
-		addEntry(db, alice, asset({ date: '2026-10-01', amount: '10.000.000', acquisition: '9.000.000' }));
-		addEntry(db, alice, asset({ date: '2026-10-15', amount: '11.000.000', acquisition: '10.500.000' }));
-
-		addEntry(db, alice, asset({ date: '2026-11-01', amount: '12.000.000' }));
-
-		expect(assetRows().at(-1)!.acquisition).toBe(10500000);
-	}
-);
-
-test(
-	'adding an asset with the acquisition value 12.500.000 stores 12500000',
-	{ meta: { scenario: 'S61' } },
-	() => {
-		addEntry(db, alice, asset({ acquisition: '12.500.000' }));
-
-		expect(assetRows()[0].acquisition).toBe(12500000);
 	}
 );
 
@@ -299,10 +216,10 @@ test(
 );
 
 const sale = (fields: Record<string, string> = {}) =>
-	income({ date: '2026-11-03', amount: '150.000.000', category: 'sales of asset', asset: 'Car', ...fields });
+	income({ date: '2026-11-03', amount: '150.000.000', category: 'sales of asset', asset: 'AST-0001', ...fields });
 
 test('a sale with a blank note stores the note "Sale of Car"', { meta: { scenario: 'S124' } }, () => {
-	addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
+	hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
 
 	addEntry(db, alice, sale());
 
@@ -313,14 +230,15 @@ test(
 	'the held assets list each asset whose latest value is above 0, and no liability',
 	{ meta: { scenario: 'S125' } },
 	() => {
-		addEntry(db, alice, asset({ name: 'Savings account' }));
-		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
-		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', amount: '0' }));
-		addEntry(db, alice, asset({ name: 'Bond', cls: 'Investments', date: '2026-10-01', amount: '0' }));
-		addEntry(db, alice, asset({ name: 'Bond', cls: 'Investments', amount: '5.000.000' }));
-		addEntry(db, alice, asset({ name: 'Mortgage loan', cls: 'Liability', term: 'Long term' }));
+		hold({ name: 'Savings account' });
+		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
+		hold({ name: 'Car', cls: 'Other', amount: '0' });
+		hold({ name: 'Bond', cls: 'Bond', date: '2026-10-01' });
+		hold({ name: 'Bond', cls: 'Bond', date: '2026-10-02', amount: '0' });
+		hold({ name: 'Bond', cls: 'Bond', amount: '5.000.000' });
+		hold({ name: 'Mortgage loan', cls: 'Liability', term: 'Long term' });
 
-		expect(heldAssets(db, alice)).toEqual(['Bond', 'Savings account']);
+		expect(heldAssets(db, alice).map((row) => row.name)).toEqual(['Savings account', 'Bond']);
 	}
 );
 
@@ -340,7 +258,7 @@ test(
 	'saving the date 2026/11/10 on an edited sale of car leaves one update of car worth 0 dated 2026/11/10',
 	{ meta: { scenario: 'S129' } },
 	() => {
-		addEntry(db, alice, asset({ name: 'Car', cls: 'Other', date: '2026-10-01' }));
+		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
 		addEntry(db, alice, sale());
 		const id = `e${(entryRows()[0] as { id: number }).id}`;
 

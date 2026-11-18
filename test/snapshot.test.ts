@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { post, registered } from './app';
 import { openPage } from './browser';
+import { addHolding } from './holdings';
 
 test(
 	'entries from 2026/08 to 2026/11 show the report columns 2026/09, 2026/10, and 2026/11',
@@ -76,11 +77,7 @@ test('expenses of 2.000.000 against an income of 1.000.000 show a remaining amou
 
 test('an account with a cash asset sees the asset report with its cash value', async () => {
 	const { cookie } = await registered();
-	await post(
-		'/diary',
-		{ type: 'asset', date: '2026/11/05', amount: '10.000.000', currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' },
-		cookie
-	);
+	await addHolding(cookie, { date: '2026/11/05', amount: '10.000.000', name: 'Savings account' });
 
 	const page = await openPage('/snapshot', cookie);
 	const worth = page.getByRole('region', { name: 'Asset Report (market value unless stated)' });

@@ -1,5 +1,6 @@
 import { parseAmount } from '#lib/amount.ts';
 import { sale } from '#lib/category.ts';
+import { heldAssets } from './assets';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
 import { recordKey } from './records';
@@ -7,7 +8,7 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' | 'weight' | 'price' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' };
 
 type Added = { added: true };
 
@@ -25,88 +26,29 @@ function parseCommon(fields: EntryFields): Refusal | Common {
 	return { date, amount, currency, note: field(fields, 'note') };
 }
 
-function lastAcquisition(db: Db, userId: number, name: string) {
-	const row = db
-		.prepare(
-			`SELECT acquisition FROM diary_assets WHERE user_id = ? AND name = ? AND acquisition IS NOT NULL
-			ORDER BY date DESC, id DESC LIMIT 1`
-		)
-		.get(userId, name) as { acquisition: number } | undefined;
-	return row?.acquisition;
-}
-
-type Gold = { weight: number; price: number };
-
-function parseGold(fields: EntryFields): Refusal | Gold {
-	const weight = parseAmount(field(fields, 'weight'));
-	if (weight === null) return { message: 'Please enter the weight in grams (numbers only).', field: 'weight' };
-	const price = parseAmount(field(fields, 'price'));
-	if (price === null) return { message: 'Please enter the market price per gram (numbers only).', field: 'price' };
-	return { weight, price };
-}
-
-function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
+function addLiability(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
 	const name = field(fields, 'name');
-	if (!name) return { message: 'Please enter a name for the asset.', field: 'name' };
-	const cls = field(fields, 'cls');
-	const liability = cls === 'Liability';
-	const gold = cls === 'Goldbar' ? parseGold(fields) : null;
-	if (gold && 'message' in gold) return gold;
-	const acquisition = liability
-		? null
-		: gold
-			? common.amount
-			: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
+	if (!name) return { message: 'Please enter a name for the liability.', field: 'name' };
 	db.prepare(
-		`INSERT INTO diary_assets (id, user_id, date, name, class, value, currency, source, term, acquisition, weight, price, note)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	).run(
-		id,
-		userId,
-		common.date,
-		name,
-		cls,
-		gold ? gold.weight * gold.price : common.amount,
-		common.currency,
-		liability ? null : field(fields, 'source'),
-		liability ? field(fields, 'term') : null,
-		acquisition,
-		gold?.weight ?? null,
-		gold?.price ?? null,
-		common.note
-	);
+		`INSERT INTO diary_assets (id, user_id, date, name, class, value, currency, term, note)
+		VALUES (?, ?, ?, ?, 'Liability', ?, ?, ?, ?)`
+	).run(id, userId, common.date, name, common.amount, common.currency, field(fields, 'term'), common.note);
 	return { added: true };
 }
 
-type Holding = { name: string; class: string; value: number; currency: string; source: string | null };
-
-function latestHoldings(db: Db, userId: number) {
-	const rows = db
-		.prepare('SELECT name, class, value, currency, source FROM diary_assets WHERE user_id = ? ORDER BY date, id')
-		.all(userId) as Holding[];
-	const latest = new Map(rows.map((row) => [row.name, row]));
-	return [...latest.values()].filter((row) => row.class !== 'Liability' && row.value > 0);
-}
-
-export function heldAssets(db: Db, userId: number) {
-	return latestHoldings(db, userId)
-		.map((row) => row.name)
-		.sort();
-}
-
 function addSale(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
-	const sold = latestHoldings(db, userId).find((row) => row.name === field(fields, 'asset'));
+	const sold = heldAssets(db, userId).find((row) => row.code === field(fields, 'asset'));
 	if (!sold) return { message: 'Choose the asset that was sold.', field: 'asset' };
 	const entry = db
 		.prepare(
 			`INSERT INTO diary_entries (id, user_id, kind, date, amount, currency, category, note)
 			VALUES (?, ?, 'income', ?, ?, ?, ?, ?)`
 		)
-		.run(id, userId, common.date, common.amount, common.currency, sale, common.note || `Sale of ${sold.name}`);
+		.run(id, userId, common.date, common.amount, common.currency, sale, common.note || `Sale of ${sold.name || sold.code}`);
 	db.prepare(
-		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id)
-		VALUES (?, ?, ?, ?, 0, ?, ?, 0, '', ?)`
-	).run(userId, common.date, sold.name, sold.class, sold.currency, sold.source, entry.lastInsertRowid);
+		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id, code, unit, unit_currency)
+		VALUES (?, ?, ?, ?, 0, ?, ?, 0, '', ?, ?, ?, ?)`
+	).run(userId, common.date, sold.name, sold.class, sold.currency, sold.source, entry.lastInsertRowid, sold.code, sold.unit, sold.unit_currency);
 	return { added: true };
 }
 
@@ -134,8 +76,8 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 function insert(db: Db, userId: number, fields: EntryFields, id: number | null): Refusal | Added {
 	const common = parseCommon(fields);
 	if ('message' in common) return common;
-	return fields.type === 'asset'
-		? addAsset(db, userId, fields, common, id)
+	return fields.type === 'debt'
+		? addLiability(db, userId, fields, common, id)
 		: addIncomeOrExpense(db, userId, fields, common, id);
 }
 
@@ -155,7 +97,7 @@ export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal 
 	if (!old || !db.prepare(`SELECT 1 FROM ${old.table} WHERE id = ? AND user_id = ?`).get(old.id, userId)) {
 		return { missing: true };
 	}
-	const table = fields.type === 'asset' ? 'diary_assets' : 'diary_entries';
+	const table = fields.type === 'debt' ? 'diary_assets' : 'diary_entries';
 	try {
 		return db.transaction(() => {
 			db.prepare(`DELETE FROM ${old.table} WHERE id = ?`).run(old.id);

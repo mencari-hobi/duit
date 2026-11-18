@@ -3,6 +3,7 @@ import type { Page } from 'playwright';
 import { expect, inject, test } from 'vitest';
 import { post, registered } from './app';
 import { openPage } from './browser';
+import { addHolding } from './holdings';
 
 function rows(table: 'entries' | 'assets', name: string) {
 	const db = new Database(inject('databasePath'), { readonly: true });
@@ -56,34 +57,6 @@ test(
 				expense_type: 'Non-fixed - Essential',
 				owner: 'Personal',
 				note: 'Weekly shop'
-			})
-		]);
-	}
-);
-
-test(
-	'adding the cash asset savings account worth 12000000 funded by salary stores it and shows "Added ✓"',
-	{ meta: { scenario: 'S47' } },
-	async () => {
-		const { name, cookie } = await registered();
-		const page = await openPage('/diary', cookie);
-		await chooseType(page, 'Asset / Liability');
-		await page.getByLabel('Current value').pressSequentially('12000000');
-		await page.getByLabel('Date').fill('2026-11-03');
-		await page.getByLabel('Name').fill('Savings account');
-		await page.getByLabel('Class').selectOption('Cash');
-		await page.getByLabel('Source of fund').selectOption('Salary');
-
-		await page.getByRole('button', { name: 'Add entry' }).click();
-
-		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
-		expect(rows('assets', name)).toEqual([
-			expect.objectContaining({
-				name: 'Savings account',
-				class: 'Cash',
-				value: 12000000,
-				currency: 'IDR',
-				source: 'Salary'
 			})
 		]);
 	}
@@ -298,21 +271,6 @@ test(
 	}
 );
 
-test(
-	'typing 12500000 into the acquisition value shows 12.500.000',
-	{ meta: { scenario: 'S60' } },
-	async () => {
-		const { cookie } = await registered();
-		const page = await openPage('/diary', cookie);
-		await chooseType(page, 'Asset / Liability');
-		const acquisition = page.getByLabel(/^Acquisition value/);
-
-		await acquisition.pressSequentially('12500000');
-
-		expect(await acquisition.inputValue()).toBe('12.500.000');
-	}
-);
-
 test('adding an expense with a blank amount shows the numbers-only message and keeps the typed note', async () => {
 	const { name, cookie } = await registered();
 	const page = await openPage('/diary', cookie);
@@ -329,17 +287,6 @@ test('adding an expense with a blank amount shows the numbers-only message and k
 	expect(await page.getByLabel('Date').getAttribute('aria-invalid')).toBeNull();
 	expect(await page.getByLabel('Note (optional)').inputValue()).toBe('Weekly shop');
 	expect(rows('entries', name)).toEqual([]);
-});
-
-test('choosing the liability class shows the liability term in place of the source of fund', async () => {
-	const { cookie } = await registered();
-	const page = await openPage('/diary', cookie);
-	await chooseType(page, 'Asset / Liability');
-
-	await page.getByLabel('Class').selectOption('Liability');
-
-	expect(await page.getByLabel('Liability term').inputValue()).toBe('Long term');
-	expect(await page.getByLabel('Source of fund').count()).toBe(0);
 });
 
 test('after adding an expense under eating out, the page keeps expense and eating out chosen', async () => {
@@ -412,14 +359,10 @@ test(
 	{ meta: { scenario: 'S123' } },
 	async () => {
 		const { name, cookie } = await registered();
-		await post(
-			'/diary',
-			{ type: 'asset', date: '2026/10/01', amount: '150.000.000', currency: 'IDR', name: 'Car', cls: 'Other', source: 'Salary' },
-			cookie
-		);
+		await addHolding(cookie, { date: '2026/10/01', amount: '150.000.000', name: 'Car', cls: 'Other' });
 		const page = await openPage('/diary', cookie);
 		await chooseSale(page);
-		await page.getByLabel('Asset sold').selectOption('Car');
+		await page.getByLabel('Asset sold').selectOption({ label: 'AST-0001 · Car' });
 		await page.getByLabel('Amount').pressSequentially('150000000');
 		await page.getByLabel('Date').fill('2026-11-03');
 
@@ -448,51 +391,184 @@ test(
 	}
 );
 
-test('adding the goldbar Antam of 2,5 grams at 1.500.000 per gram for 3.000.000 shows a market value of 3.750.000 and stores it', async () => {
-	const { name, cookie } = await registered();
-	const page = await openPage('/diary', cookie);
-	await chooseType(page, 'Asset / Liability');
-	await page.getByLabel('Class').selectOption('Goldbar');
-	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');
-	await page.getByLabel('Name').fill('Antam');
-	await page.getByLabel('Weight (grams)').pressSequentially('2,5');
-	await page.getByLabel('Market price per gram').pressSequentially('1500000');
 
-	expect(await page.getByText('Market value:').textContent()).toContain('3.750.000');
-	await page.getByRole('button', { name: 'Add entry' }).click();
+async function openAssetTab(cookie: string, view = 'purchase') {
+	const page = await openPage(`/diary?tab=asset&view=${view}`, cookie);
+	return page;
+}
 
-	await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
-	expect(rows('assets', name)).toEqual([
-		expect.objectContaining({ name: 'Antam', class: 'Goldbar', value: 3750000, acquisition: 3000000, weight: 2.5, price: 1500000 })
+test(
+	'saving a gold purchase of 25 gr for 62.500.000 stores AST-0001 at its cost and shows "Saved AST-0001 ✓"',
+	{ meta: { scenario: 'S47' } },
+	async () => {
+		const { name, cookie } = await registered();
+		const page = await openPage('/diary', cookie);
+		await chooseType(page, 'Asset');
+		await page.getByLabel('Purchase date').fill('2026/11/12');
+		await page.getByLabel('Asset type').selectOption('Gold');
+		await page.getByLabel('Source').selectOption('Bonus');
+		await page.getByLabel('Unit (gr)').pressSequentially('25');
+		await page.getByLabel('Acquisition cost (IDR)').pressSequentially('62500000');
+		await page.getByLabel('Note (optional)').fill('Antam bar');
+
+		await page.getByRole('button', { name: 'Save purchase' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Saved AST-0001 ✓');
+		expect(rows('assets', name)).toEqual([
+			expect.objectContaining({
+				code: 'AST-0001',
+				name: 'Antam bar',
+				class: 'Gold',
+				date: '2026-11-12',
+				source: 'Bonus',
+				unit: 25,
+				value: 62500000,
+				acquisition: 62500000,
+				currency: 'IDR'
+			})
+		]);
+	}
+);
+
+test('the unit follows the asset type', { meta: { scenario: 'S193' } }, async () => {
+	const { cookie } = await registered();
+	const page = await openAssetTab(cookie);
+	const unitLabels: string[][] = [];
+
+	for (const type of ['Gold', 'Property & Land', 'Stock', 'Mutual Fund', 'Other', 'Cash', 'Term Deposit', 'Foreign Exchanges', 'Bond']) {
+		await page.getByLabel('Asset type').selectOption(type);
+		const currency = await page.getByLabel('Unit currency').count();
+		unitLabels.push([type, (await page.locator('label[for="unit"]').textContent())!.trim(), currency ? 'currency' : '']);
+	}
+
+	expect(unitLabels).toEqual([
+		['Gold', 'Unit (gr)', ''],
+		['Property & Land', 'Unit (sqm)', ''],
+		['Stock', 'Unit (lot)', ''],
+		['Mutual Fund', 'Unit (unit)', ''],
+		['Other', 'Unit (unit)', ''],
+		['Cash', 'Unit', 'currency'],
+		['Term Deposit', 'Unit', 'currency'],
+		['Foreign Exchanges', 'Unit', 'currency'],
+		['Bond', 'Unit', 'currency']
 	]);
 });
 
-test('choosing the goldbar class shows a dash as the market value before the user types a weight and a price', async () => {
+test(
+	'an acquisition cost of 62.500.000 for 25 gr reads "IDR 2.500.000 per gr" under cost per unit',
+	{ meta: { scenario: 'S194' } },
+	async () => {
+		const { cookie } = await registered();
+		const page = await openAssetTab(cookie);
+		await page.getByLabel('Asset type').selectOption('Gold');
+
+		await page.getByLabel('Unit (gr)').pressSequentially('25');
+		await page.getByLabel('Acquisition cost (IDR)').pressSequentially('62500000');
+
+		await expect.poll(() => page.getByText('IDR 2.500.000 per gr').isVisible()).toBe(true);
+	}
+);
+
+test('the purchase lists follow the spec', { meta: { scenario: 'S195' } }, async () => {
 	const { cookie } = await registered();
-	const page = await openPage('/diary', cookie);
-	await chooseType(page, 'Asset / Liability');
+	const page = await openAssetTab(cookie);
 
-	await page.getByLabel('Class').selectOption('Goldbar');
-
-	expect(await page.getByText('Market value:').textContent()).toContain('–');
-	expect(await page.getByLabel(/^Acquisition value/).count()).toBe(0);
+	expect(await page.getByLabel('Asset type').locator('option').allTextContents()).toEqual([
+		'Cash',
+		'Term Deposit',
+		'Foreign Exchanges',
+		'Mutual Fund',
+		'Bond',
+		'Stock',
+		'Gold',
+		'Property & Land',
+		'Other'
+	]);
+	expect(await page.getByLabel('Source').locator('option').allTextContents()).toEqual([
+		'Salary',
+		'Freelance',
+		'Dividend',
+		'Bonus',
+		'Other',
+		'Debt'
+	]);
 });
 
-test('adding a goldbar without a weight flags the weight field and keeps the typed price per gram', async () => {
-	const { name, cookie } = await registered();
-	const page = await openPage('/diary', cookie);
-	await chooseType(page, 'Asset / Liability');
-	await page.getByLabel('Class').selectOption('Goldbar');
-	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');
-	await page.getByLabel('Name').fill('Antam');
-	await page.getByLabel('Market price per gram').pressSequentially('1500000');
+const goldPurchase = { type: 'asset', date: '2026/11/12', cls: 'Gold', source: 'Bonus', unit: '25', amount: '62.500.000', currency: 'IDR', note: 'Antam bar' };
 
-	await page.getByRole('button', { name: 'Add entry' }).click();
+test(
+	'choosing edit on the purchase of AST-0001 in records opens the purchase form filled, with "Save changes"',
+	{ meta: { scenario: 'S196' } },
+	async () => {
+		const { cookie } = await registered();
+		await post('/diary', goldPurchase, cookie);
+		const page = await openPage('/records', cookie);
 
-	await expect
-		.poll(() => page.getByRole('alert').textContent())
-		.toBe('Please enter the weight in grams (numbers only).');
-	expect(await page.getByLabel('Weight (grams)').getAttribute('aria-invalid')).toBe('true');
-	expect(await page.getByLabel('Market price per gram').inputValue()).toBe('1.500.000');
-	expect(rows('assets', name)).toEqual([]);
-});
+		await page.getByRole('row', { name: /AST-0001/ }).getByRole('link', { name: 'Edit' }).click();
+		await page.waitForURL((url) => url.searchParams.has('edit'));
+
+		expect(await page.getByLabel('Purchase date').inputValue()).toBe('2026/11/12');
+		expect(await page.getByLabel('Asset type').inputValue()).toBe('Gold');
+		expect(await page.getByLabel('Source').inputValue()).toBe('Bonus');
+		expect(await page.getByLabel('Unit (gr)').inputValue()).toBe('25');
+		expect(await page.getByLabel('Acquisition cost (IDR)').inputValue()).toBe('62.500.000');
+		expect(await page.getByLabel('Note (optional)').inputValue()).toBe('Antam bar');
+		expect(await page.getByRole('button', { name: 'Save changes' }).isVisible()).toBe(true);
+	}
+);
+
+test(
+	'saving 70.000.000 as of 2026/11/30 on the asset list adds an update of AST-0001',
+	{ meta: { scenario: 'S203' } },
+	async () => {
+		const { name, cookie } = await registered();
+		await post('/diary', goldPurchase, cookie);
+		const page = await openPage('/diary', cookie);
+		await chooseType(page, 'Asset');
+		await page.getByRole('link', { name: 'Asset list & update' }).click();
+		await page.waitForURL((url) => url.searchParams.get('view') === 'list');
+
+		await page.getByLabel('Value as of, AST-0001').fill('2026/11/30');
+		await page.getByLabel('Market value, AST-0001').pressSequentially('70000000');
+		await page.getByRole('button', { name: 'Save updates' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Saved ✓');
+		expect(rows('assets', name).map((row) => [row.code, row.date, row.value])).toEqual([
+			['AST-0001', '2026-11-12', 62500000],
+			['AST-0001', '2026-11-30', 70000000]
+		]);
+		expect(await page.getByRole('row', { name: /AST-0001/ }).textContent()).toContain('+7.500.000');
+	}
+);
+
+test(
+	'a new account\'s asset list reads "No assets yet. Save a purchase first."',
+	{ meta: { scenario: 'S206' } },
+	async () => {
+		const { cookie } = await registered();
+
+		const page = await openAssetTab(cookie, 'list');
+
+		expect(await page.getByText('No assets yet. Save a purchase first.').isVisible()).toBe(true);
+	}
+);
+
+test(
+	'adding the liability mortgage loan on the debt tab stores a liability without a source of fund',
+	{ meta: { scenario: 'S48' } },
+	async () => {
+		const { name, cookie } = await registered();
+		const page = await openPage('/diary', cookie);
+		await chooseType(page, 'Debt');
+		await page.getByLabel('Amount').pressSequentially('300000000');
+		await page.getByLabel('Name').fill('Mortgage loan');
+		await page.getByLabel('Liability term').selectOption('Long term');
+
+		await page.getByRole('button', { name: 'Add entry' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+		expect(rows('assets', name)).toEqual([
+			expect.objectContaining({ name: 'Mortgage loan', class: 'Liability', value: 300000000, term: 'Long term', source: null, code: null })
+		]);
+	}
+);

@@ -86,11 +86,48 @@ export function openDatabase(path: string): Db {
 		);
 	`);
 	const columns = db.prepare('PRAGMA table_info(diary_assets)').all() as { name: string }[];
-	const added = { sale_id: 'INTEGER REFERENCES diary_entries(id) ON DELETE CASCADE', weight: 'REAL', price: 'REAL' };
+	const added = {
+		sale_id: 'INTEGER REFERENCES diary_entries(id) ON DELETE CASCADE',
+		weight: 'REAL',
+		price: 'REAL',
+		code: 'TEXT',
+		unit: 'REAL',
+		unit_currency: 'TEXT'
+	};
 	for (const [name, type] of Object.entries(added)) {
 		if (!columns.some((column) => column.name === name)) db.exec(`ALTER TABLE diary_assets ADD COLUMN ${name} ${type}`);
 	}
+	codeOldAssets(db);
 	return db;
+}
+
+const renamedTypes = { Investments: 'Mutual Fund', Goldbar: 'Gold', Property: 'Property & Land' };
+
+export function nextAssetCode(db: Db, userId: number) {
+	const row = db
+		.prepare("SELECT max(CAST(substr(code, 5) AS INTEGER)) AS last FROM diary_assets WHERE user_id = ? AND code IS NOT NULL")
+		.get(userId) as { last: number | null };
+	return `AST-${String((row.last ?? 0) + 1).padStart(4, '0')}`;
+}
+
+function codeOldAssets(db: Db) {
+	db.transaction(() => {
+		for (const [old, renamed] of Object.entries(renamedTypes)) {
+			db.prepare('UPDATE diary_assets SET class = ? WHERE class = ?').run(renamed, old);
+		}
+		db.exec("UPDATE diary_assets SET unit = weight WHERE class = 'Gold' AND unit IS NULL AND weight IS NOT NULL");
+		const uncoded = db
+			.prepare(
+				`SELECT user_id AS userId, name FROM diary_assets
+				WHERE code IS NULL AND class != 'Liability'
+				GROUP BY user_id, name ORDER BY user_id, min(date), min(id)`
+			)
+			.all() as { userId: number; name: string }[];
+		const assign = db.prepare(
+			"UPDATE diary_assets SET code = ? WHERE user_id = ? AND name = ? AND code IS NULL AND class != 'Liability'"
+		);
+		for (const { userId, name } of uncoded) assign.run(nextAssetCode(db, userId), userId, name);
+	})();
 }
 
 let shared: Db | undefined;

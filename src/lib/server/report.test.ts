@@ -3,6 +3,7 @@ import { millions } from '#lib/report.ts';
 import { register } from './auth';
 import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
+import { recordHolding } from './holdings-fixture';
 import { loadReport } from './report';
 import { saveSettings } from './settings';
 
@@ -34,16 +35,7 @@ function expense(date: string, amount: string, fields: Record<string, string> = 
 }
 
 function asset(date: string, name: string, amount: string, fields: Record<string, string> = {}) {
-	addEntry(db, alice, {
-		type: 'asset',
-		date,
-		name,
-		amount,
-		currency: 'IDR',
-		cls: 'Cash',
-		source: 'Salary',
-		...fields
-	});
+	recordHolding(db, alice, { date, name, amount, ...fields });
 }
 
 function line(label: string) {
@@ -139,13 +131,25 @@ test(
 );
 
 test(
-	'a goldbar asset of 2.000.000 reads "Non-liquid assets" 2,00 with a "Goldbar" line of 2,00',
+	'a gold asset of 2.000.000 reads "Non-liquid assets" 2,00 with a "Gold" line of 2,00',
 	{ meta: { scenario: 'S135' } },
 	() => {
 		asset('2026/11/01', 'Savings account', '6.000.000');
-		asset('2026/11/01', 'Antam 10 g', '2.000.000', { cls: 'Goldbar', weight: '10', price: '200.000' });
+		asset('2026/11/01', 'Antam bar', '2.000.000', { cls: 'Gold' });
 
-		expect([line('Liquid assets'), line('Non-liquid assets'), line('Goldbar')]).toEqual([6000000, 2000000, 2000000]);
+		expect([line('Liquid assets'), line('Non-liquid assets'), line('Gold')]).toEqual([6000000, 2000000, 2000000]);
+	}
+);
+
+test(
+	'term deposit, foreign exchanges, and mutual fund assets of 1.000.000 each read "Liquid assets" 3,00',
+	{ meta: { scenario: 'S207' } },
+	() => {
+		asset('2026/11/01', 'Deposit', '1.000.000', { cls: 'Term Deposit' });
+		asset('2026/11/01', 'Dollars', '1.000.000', { cls: 'Foreign Exchanges' });
+		asset('2026/11/01', 'Fund', '1.000.000', { cls: 'Mutual Fund' });
+
+		expect([line('Liquid assets'), line('Term Deposit'), line('Mutual Fund')]).toEqual([3000000, 1000000, 1000000]);
 	}
 );
 
@@ -331,7 +335,7 @@ test(
 			amount: '50.000.000',
 			currency: 'IDR',
 			category: 'sales of asset',
-			asset: 'Car'
+			asset: 'AST-0001'
 		});
 
 		expect([line('Total Income'), line(memo)]).toEqual([8000000, 50000000]);

@@ -2,6 +2,7 @@ import type { Page } from 'playwright';
 import { expect, test } from 'vitest';
 import { post, registered } from './app';
 import { openPage } from './browser';
+import { addHolding } from './holdings';
 
 function addIncome(cookie: string, date: string, amount: string) {
 	return post('/diary', { type: 'income', date, amount, currency: 'IDR', category: 'salary', note: '' }, cookie);
@@ -112,11 +113,7 @@ test(
 );
 
 function addAsset(cookie: string, date: string, name: string, amount: string, fields: Record<string, string> = {}) {
-	return post(
-		'/diary',
-		{ type: 'asset', date, amount, currency: 'IDR', name, cls: 'Cash', source: 'Salary', note: '', ...fields },
-		cookie
-	);
+	return addHolding(cookie, { date, name, amount, ...fields });
 }
 
 function addDollarExpense(cookie: string, date: string, amount: string) {
@@ -229,7 +226,7 @@ test(
 );
 
 test(
-	'savings account updated from 10.000.000 to 12.000.000 reads 12.000.000 and a change of +2.000.000 (20.0%)',
+	'savings account updated from 10.000.000 to 12.000.000 reads under its code with 12.000.000 and a change of +2.000.000 (20.0%)',
 	{ meta: { scenario: 'S82' } },
 	async () => {
 		const { cookie } = await registered();
@@ -240,7 +237,7 @@ test(
 		const cells = page.getByRole('row', { name: /Savings account/ }).getByRole('cell');
 
 		expect(await cells.allTextContents()).toEqual([
-			'Savings account',
+			'AST-0001 · Savings account',
 			'Cash',
 			'Salary',
 			'12.000.000',
@@ -251,6 +248,7 @@ test(
 
 test('an asset updated from 0 to 5.000.000 reads its change without a share', async () => {
 	const { cookie } = await registered();
+	await addAsset(cookie, '2026/09/01', 'Savings account', '1');
 	await addAsset(cookie, '2026/10/01', 'Savings account', '0');
 	await addAsset(cookie, '2026/11/01', 'Savings account', '5.000.000');
 

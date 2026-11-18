@@ -1,4 +1,5 @@
 import { group } from '#lib/amount.ts';
+import { assetLabel } from '#lib/asset.ts';
 import { capitalize } from '#lib/category.ts';
 import { slashDate } from '#lib/date.ts';
 
@@ -19,8 +20,7 @@ export type Record = {
 	source?: string | null;
 	term?: string | null;
 	acquisition?: number | null;
-	weight?: number | null;
-	price?: number | null;
+	code?: string | null;
 };
 
 export const money = (n: number) => group(String(n).replace('.', ','));
@@ -28,9 +28,8 @@ export const money = (n: number) => group(String(n).replace('.', ','));
 export const label = (record: Record) =>
 	record.kind === 'asset'
 		? [
-				`${record.name} (${record.cls})`,
+				`${assetLabel(record.code, record.name)} (${record.cls})`,
 				record.source && `funded by ${record.source}`,
-				record.weight != null && record.price != null && `${money(record.weight)} g × ${money(record.price)}`,
 				record.acquisition != null && `cost ${money(record.acquisition)}`
 			]
 				.filter(Boolean)

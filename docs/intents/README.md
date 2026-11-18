@@ -62,3 +62,12 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I15: A wrong plan item gets fixed where the budget shows it
 - Why: The user chose Edit and Delete on the View budget rows
 - Serves: F24
+
+## Intent I16: Each asset keeps one code and a history of valuations, with its gain or loss in view
+- Why: The mockup and the Spec replace retyping an asset's details at each value change with a purchase and a list of updates
+- Not: an "Assets" menu item outside the Financial Diary
+- Serves: F11, F25, R84, S89, S96, S208, S211
+
+## Intent I17: Liquid assets cover cash, term deposits, foreign exchanges, and mutual funds
+- Why: The user counts money reachable within days as liquid
+- Serves: S207

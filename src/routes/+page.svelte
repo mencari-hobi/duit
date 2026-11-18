@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { assetLabel } from '#lib/asset.ts';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
@@ -23,7 +24,17 @@
 	const money = (n: number) => (n < 0 ? '−' : '') + group(String(Math.abs(Math.round(n))));
 	const signed = (n: number) => (n > 0 ? '+' : '') + money(n);
 
-	const classes: [string, string][] = [['Cash', 'var(--chart-1)'], ['Investments', 'var(--chart-2)'], ['Goldbar', 'var(--chart-6)'], ['Property', 'var(--chart-4)'], ['Other', 'var(--chart-5)']];
+	const classes: [string, string][] = [
+		['Cash', 'var(--chart-1)'],
+		['Term Deposit', 'color-mix(in oklab, var(--chart-1) 55%, white)'],
+		['Foreign Exchanges', 'var(--chart-2)'],
+		['Mutual Fund', 'color-mix(in oklab, var(--chart-2) 55%, white)'],
+		['Bond', 'var(--chart-6)'],
+		['Stock', 'color-mix(in oklab, var(--chart-6) 55%, white)'],
+		['Gold', 'var(--chart-4)'],
+		['Property & Land', 'var(--chart-5)'],
+		['Other', 'var(--muted-foreground)']
+	];
 	const types: [string, string][] = [
 		['Fixed - Essential', 'var(--chart-3)'],
 		['Non-fixed - Essential', 'var(--chart-4)'],
@@ -196,10 +207,10 @@
 			</Card.Header>
 			<Card.Content>
 				<ul class="divide-y md:hidden">
-					{#each board.table as row (row.name)}
+					{#each board.table as row (assetLabel(row.code, row.name))}
 						<li class="flex items-start justify-between gap-3 py-2.5">
 							<div class="min-w-0">
-								<p class="font-medium">{row.name}</p>
+								<p class="font-medium">{assetLabel(row.code, row.name)}</p>
 								<p class="text-xs text-muted-foreground">{row.cls} · {row.source ?? '–'}</p>
 							</div>
 							<div class="text-right tabular-nums">
@@ -221,9 +232,9 @@
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{#each board.table as row (row.name)}
+							{#each board.table as row (assetLabel(row.code, row.name))}
 								<Table.Row>
-									<Table.Cell class="pl-4 font-medium">{row.name}</Table.Cell>
+									<Table.Cell class="pl-4 font-medium">{assetLabel(row.code, row.name)}</Table.Cell>
 									<Table.Cell>{row.cls}</Table.Cell>
 									<Table.Cell>{row.source ?? '–'}</Table.Cell>
 									<Table.Cell class="text-right tabular-nums">{money(row.value)}</Table.Cell>

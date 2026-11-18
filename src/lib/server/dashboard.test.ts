@@ -3,6 +3,7 @@ import { register } from './auth';
 import { loadDashboard } from './dashboard';
 import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
+import { recordHolding } from './holdings-fixture';
 import { saveSettings } from './settings';
 
 let db: Db;
@@ -33,16 +34,7 @@ function expense(date: string, amount: string, fields: Record<string, string> = 
 }
 
 function asset(date: string, name: string, amount: string, fields: Record<string, string> = {}) {
-	addEntry(db, alice, {
-		type: 'asset',
-		date,
-		name,
-		amount,
-		currency: 'IDR',
-		cls: 'Cash',
-		source: 'Salary',
-		...fields
-	});
+	recordHolding(db, alice, { date, name, amount, ...fields });
 }
 
 const board = (from = '', to = '') => loadDashboard(db, alice, from, to);
@@ -220,30 +212,28 @@ test(
 );
 
 test(
-	'a cash asset of 6.000.000 and a property asset of 2.000.000 stack as 75% and 25%',
+	'a cash asset of 6.000.000 and a property & land asset of 2.000.000 stack as 75% and 25%',
 	{ meta: { scenario: 'S81' } },
 	() => {
 		asset('2026/11/01', 'Savings account', '6.000.000');
-		asset('2026/11/01', 'Land', '2.000.000', { cls: 'Property' });
+		asset('2026/11/01', 'Land', '2.000.000', { cls: 'Property & Land' });
 
 		const { byClass } = board().months[0];
 
-		expect(byClass.Cash.share).toBe(75);
-		expect(byClass.Property.share).toBe(25);
+		expect([byClass.Cash.share, byClass['Property & Land'].share]).toEqual([75, 25]);
 	}
 );
 
 test(
-	'a cash asset of 6.000.000 and a goldbar asset of 2.000.000 stack as 75% and 25%',
+	'a cash asset of 6.000.000 and a gold asset of 2.000.000 stack as 75% and 25%',
 	{ meta: { scenario: 'S136' } },
 	() => {
 		asset('2026/11/01', 'Savings account', '6.000.000');
-		asset('2026/11/01', 'Antam 10 g', '2.000.000', { cls: 'Goldbar', weight: '10', price: '200.000' });
+		asset('2026/11/01', 'Antam bar', '2.000.000', { cls: 'Gold' });
 
 		const { byClass } = board().months[0];
 
-		expect(byClass.Cash.share).toBe(75);
-		expect(byClass.Goldbar.share).toBe(25);
+		expect([byClass.Cash.share, byClass.Gold.share]).toEqual([75, 25]);
 	}
 );
 
