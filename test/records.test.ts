@@ -6,7 +6,7 @@ import { openPage } from './browser';
 function rows(table: 'entries' | 'assets', name: string) {
 	const db = new Database(inject('databasePath'), { readonly: true });
 	const found = db
-		.prepare(`SELECT * FROM ${table} WHERE user_id = (SELECT id FROM users WHERE name = ?)`)
+		.prepare(`SELECT * FROM diary_${table} WHERE user_id = (SELECT id FROM users WHERE name = ?)`)
 		.all(name) as Record<string, unknown>[];
 	db.close();
 	return found;
@@ -36,15 +36,15 @@ const asset = {
 
 async function withEntries() {
 	const account = await registered();
-	await post('/add', expense, account.cookie);
-	await post('/add', asset, account.cookie);
+	await post('/diary', expense, account.cookie);
+	await post('/diary', asset, account.cookie);
 	return account;
 }
 
 async function editGrocery(cookie: string) {
 	const page = await openPage('/records', cookie);
 	await page.getByRole('row', { name: /Grocery/ }).getByRole('link', { name: 'Edit' }).click();
-	await page.waitForURL((url) => url.pathname === '/add');
+	await page.waitForURL((url) => url.pathname === '/diary');
 	return page;
 }
 
@@ -75,7 +75,7 @@ test('the records page reads "Nothing here yet." for an account without entries'
 });
 
 test(
-	'choosing edit on an expense opens the add page filled, with the button reading "Save changes"',
+	'choosing edit on an expense opens the financial diary page filled, with the button reading "Save changes"',
 	{ meta: { scenario: 'S94' } },
 	async () => {
 		const { cookie } = await withEntries();
@@ -167,20 +167,20 @@ test('cancelling the delete all confirmation keeps every entry', { meta: { scena
 	expect([...rows('entries', name), ...rows('assets', name)]).toHaveLength(2);
 });
 
-test('opening the add page to edit a malformed key answers 404', async () => {
+test('opening the financial diary page to edit a malformed key answers 404', async () => {
 	const { cookie } = await registered();
 
-	const response = await get('/add?edit=x1', cookie);
+	const response = await get('/diary?edit=x1', cookie);
 
 	expect(response.status).toBe(404);
 });
 
-test('opening the add page to edit an entry of another account answers 404', async () => {
+test('opening the financial diary page to edit an entry of another account answers 404', async () => {
 	const owner = await withEntries();
 	const [entry] = rows('entries', owner.name);
 	const { cookie } = await registered();
 
-	const response = await get(`/add?edit=e${entry.id}`, cookie);
+	const response = await get(`/diary?edit=e${entry.id}`, cookie);
 
 	expect(response.status).toBe(404);
 });
@@ -190,18 +190,18 @@ test('saving changes to an entry of another account answers 404 and keeps the en
 	const [entry] = rows('entries', owner.name);
 	const { cookie } = await registered();
 
-	const response = await post('/add', { ...expense, amount: '1', id: `e${entry.id}` }, cookie);
+	const response = await post('/diary', { ...expense, amount: '1', id: `e${entry.id}` }, cookie);
 
 	expect(response.status).toBe(404);
 	expect(rows('entries', owner.name)[0].amount).toBe(50000);
 });
 
-test('tapping an expense row on a phone opens the add page to edit it', async () => {
+test('tapping an expense row on a phone opens the financial diary page to edit it', async () => {
 	const { cookie } = await withEntries();
 	const page = await openPage('/records', cookie, 360);
 
 	await page.getByRole('link', { name: /^Edit Grocery/ }).click();
-	await page.waitForURL((url) => url.pathname === '/add');
+	await page.waitForURL((url) => url.pathname === '/diary');
 
 	expect(await page.getByLabel('Amount').inputValue()).toBe('50.000');
 	expect(await page.getByRole('button', { name: 'Save changes' }).isVisible()).toBe(true);

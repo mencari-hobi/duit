@@ -25,7 +25,7 @@
 </script>
 
 <div>
-	<h1 class="text-3xl">Report</h1>
+	<h1 class="text-3xl">Financial Snapshot</h1>
 	{#if report}
 		<p class="text-muted-foreground">The last 3 reporting months, in millions of {report.currency}</p>
 	{/if}
@@ -38,7 +38,7 @@
 		</div>
 		<p class="font-heading text-xl">No data yet.</p>
 		<p class="max-w-xs text-sm text-muted-foreground">The report fills in once you add an income, an expense, or an asset.</p>
-		<Button href="/add" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
+		<Button href="/diary" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
 	</div>
 {:else}
 	{#each report.sections as section (section.id)}

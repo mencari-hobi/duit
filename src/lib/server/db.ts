@@ -9,6 +9,11 @@ export function openDatabase(path: string): Db {
 	const db = new Database(path);
 	db.pragma('journal_mode = WAL');
 	db.pragma('foreign_keys = ON');
+	const exists = (name: string) =>
+		db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) !== undefined;
+	for (const [old, renamed] of [['entries', 'diary_entries'], ['assets', 'diary_assets']]) {
+		if (exists(old) && !exists(renamed)) db.exec(`ALTER TABLE ${old} RENAME TO ${renamed}`);
+	}
 	db.exec(`
 		CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY,
@@ -25,7 +30,7 @@ export function openDatabase(path: string): Db {
 			currency TEXT NOT NULL,
 			start_day INTEGER NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS entries (
+		CREATE TABLE IF NOT EXISTS diary_entries (
 			id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
@@ -37,7 +42,7 @@ export function openDatabase(path: string): Db {
 			owner TEXT,
 			note TEXT NOT NULL
 		);
-		CREATE TABLE IF NOT EXISTS assets (
+		CREATE TABLE IF NOT EXISTS diary_assets (
 			id INTEGER PRIMARY KEY,
 			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
 			date TEXT NOT NULL,
@@ -50,11 +55,23 @@ export function openDatabase(path: string): Db {
 			acquisition REAL,
 			note TEXT NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS plan_entries (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+			amount REAL NOT NULL,
+			currency TEXT NOT NULL,
+			timeframe TEXT NOT NULL CHECK (timeframe IN ('daily', 'weekly', 'monthly', 'quarterly', 'annually')),
+			category TEXT NOT NULL,
+			expense_type TEXT,
+			owner TEXT,
+			note TEXT NOT NULL
+		);
 	`);
-	const columns = db.prepare('PRAGMA table_info(assets)').all() as { name: string }[];
-	const added = { sale_id: 'INTEGER REFERENCES entries(id) ON DELETE CASCADE', weight: 'REAL', price: 'REAL' };
+	const columns = db.prepare('PRAGMA table_info(diary_assets)').all() as { name: string }[];
+	const added = { sale_id: 'INTEGER REFERENCES diary_entries(id) ON DELETE CASCADE', weight: 'REAL', price: 'REAL' };
 	for (const [name, type] of Object.entries(added)) {
-		if (!columns.some((column) => column.name === name)) db.exec(`ALTER TABLE assets ADD COLUMN ${name} ${type}`);
+		if (!columns.some((column) => column.name === name)) db.exec(`ALTER TABLE diary_assets ADD COLUMN ${name} ${type}`);
 	}
 	return db;
 }

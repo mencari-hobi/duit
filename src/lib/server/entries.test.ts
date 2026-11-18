@@ -48,8 +48,8 @@ const asset = (fields: Record<string, string> = {}) => ({
 	...fields
 });
 
-const entryRows = () => db.prepare('SELECT * FROM entries').all() as Record<string, unknown>[];
-const assetRows = () => db.prepare('SELECT * FROM assets').all() as Record<string, unknown>[];
+const entryRows = () => db.prepare('SELECT * FROM diary_entries').all() as Record<string, unknown>[];
+const assetRows = () => db.prepare('SELECT * FROM diary_assets').all() as Record<string, unknown>[];
 
 test(
 	'adding an income of 5200000 under salary stores an income entry without an expense type or an owner',

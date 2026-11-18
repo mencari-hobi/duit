@@ -7,7 +7,7 @@ import { openPage } from './browser';
 function rows(table: 'entries' | 'assets', name: string) {
 	const db = new Database(inject('databasePath'), { readonly: true });
 	const found = db
-		.prepare(`SELECT * FROM ${table} WHERE user_id = (SELECT id FROM users WHERE name = ?)`)
+		.prepare(`SELECT * FROM diary_${table} WHERE user_id = (SELECT id FROM users WHERE name = ?)`)
 		.all(name) as Record<string, unknown>[];
 	db.close();
 	return found;
@@ -34,7 +34,7 @@ test(
 	{ meta: { scenario: 'S33' } },
 	async () => {
 		const { name, cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Expense');
 		await page.getByLabel('Amount').pressSequentially('50000');
 		await page.getByLabel('Date').fill('2026-11-02');
@@ -66,7 +66,7 @@ test(
 	{ meta: { scenario: 'S47' } },
 	async () => {
 		const { name, cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Asset / Liability');
 		await page.getByLabel('Current value').pressSequentially('12000000');
 		await page.getByLabel('Date').fill('2026-11-03');
@@ -94,44 +94,142 @@ test(
 	{ meta: { scenario: 'S39' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 
 		expect(await categoryNames(page)).toEqual(['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Sales of Asset']);
 	}
 );
 
+const expenseDefaults = [
+	['Grocery', 'Non-fixed - Essential'],
+	['Eating Out', 'Non-fixed - Non-essential'],
+	['Electricity', 'Non-fixed - Essential'],
+	['Gasoline & Tolls', 'Non-fixed - Essential'],
+	['School Tuition', 'Fixed - Essential'],
+	['Phone Credit', 'Fixed - Essential'],
+	['Internet', 'Fixed - Essential'],
+	['Self Care/Entertainment', 'Non-fixed - Non-essential'],
+	['Clothes', 'Non-fixed - Non-essential'],
+	['Sports/Gym', 'Fixed - Non-essential'],
+	['Healthcare', 'Non-fixed - Essential'],
+	['Courses', 'Non-fixed - Non-essential'],
+	['Gift & Charity', 'Non-fixed - Non-essential'],
+	['House Maintenance', 'Non-fixed - Essential'],
+	['Car Maintenance', 'Non-fixed - Essential'],
+	['Housekeeping', 'Fixed - Non-essential'],
+	['Birthday/Anniversary/Holiday', 'Non-fixed - Non-essential']
+];
+
+async function openExpenseForm() {
+	const account = await registered();
+	const page = await openPage('/diary', account.cookie);
+	await chooseType(page, 'Expense');
+	return { ...account, page };
+}
+
+async function chooseCategory(page: Page, name: string) {
+	await (await openCategories(page)).getByText(name, { exact: true }).click();
+}
+
 test(
-	"with expense chosen, the category list shows the mockup's expense categories",
+	"with expense chosen, a new account's category list shows the spec's 17 expense categories and lacks the installments",
 	{ meta: { scenario: 'S40' } },
 	async () => {
-		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const { page } = await openExpenseForm();
 
-		await chooseType(page, 'Expense');
+		expect(await categoryNames(page)).toEqual(expenseDefaults.map(([category]) => category));
+	}
+);
 
-		expect(await categoryNames(page)).toEqual([
-			'Grocery',
-			'Eating Out',
-			'Electricity',
-			'Gasoline & Tolls',
-			'School Tuition',
-			'Phone Credit',
-			'Internet',
-			'Self Care/Entertainment',
-			'Clothes',
-			'Sports/Gym',
-			'Healthcare',
-			'Courses',
-			'Gift & Charity',
-			'House Maintenance',
-			'Car Maintenance',
-			'Housekeeping',
-			'Birthday/Anniversary/Holiday',
-			'Mortgage',
-			'Car Installment',
-			'Debt Payment',
-			'Other Installment'
+test(
+	'the expense form opens with grocery and its default expense type chosen',
+	{ meta: { scenario: 'S142' } },
+	async () => {
+		const { page } = await openExpenseForm();
+
+		expect(await page.getByRole('combobox', { name: 'Category' }).textContent()).toContain('Grocery');
+		expect(await page.getByLabel('Expense type').inputValue()).toBe('Non-fixed - Essential');
+	}
+);
+
+test(
+	'each listed expense category fills the expense type the settings sheet pairs with it',
+	{ meta: { scenario: 'S143' } },
+	async () => {
+		const { page } = await openExpenseForm();
+		const filled: string[][] = [];
+
+		for (const [category] of expenseDefaults) {
+			await chooseCategory(page, category);
+			filled.push([category, await page.getByLabel('Expense type').inputValue()]);
+		}
+
+		expect(filled).toEqual(expenseDefaults);
+	}
+);
+
+test(
+	'choosing the new category pet food keeps the expense type chosen before it',
+	{ meta: { scenario: 'S144' } },
+	async () => {
+		const { page } = await openExpenseForm();
+		await chooseCategory(page, 'School Tuition');
+		await openCategories(page);
+
+		await page.getByPlaceholder('+ New category').fill('Pet Food');
+		await page.keyboard.press('Enter');
+
+		await expect
+			.poll(() => page.getByRole('combobox', { name: 'Category' }).textContent())
+			.toContain('Pet Food');
+		expect(await page.getByLabel('Expense type').inputValue()).toBe('Fixed - Essential');
+	}
+);
+
+test(
+	'changing the filled expense type of grocery, then adding the expense, stores the changed type',
+	{ meta: { scenario: 'S145' } },
+	async () => {
+		const { name, page } = await openExpenseForm();
+		await page.getByLabel('Amount').pressSequentially('50000');
+
+		await page.getByLabel('Expense type').selectOption('Fixed - Non-essential');
+		await page.getByRole('button', { name: 'Add entry' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+		expect(rows('entries', name)).toEqual([
+			expect.objectContaining({ category: 'grocery', expense_type: 'Fixed - Non-essential' })
 		]);
+	}
+);
+
+test(
+	'editing a grocery expense stored with another expense type opens with the stored type',
+	{ meta: { scenario: 'S146' } },
+	async () => {
+		const { name, cookie } = await registered();
+		await post(
+			'/diary',
+			{ type: 'expense', date: '2026/11/02', amount: '50.000', currency: 'IDR', category: 'grocery', expenseType: 'Fixed - Non-essential', owner: 'Personal', note: '' },
+			cookie
+		);
+		const [entry] = rows('entries', name);
+
+		const page = await openPage(`/diary?edit=e${entry.id}`, cookie);
+
+		expect(await page.getByLabel('Expense type').inputValue()).toBe('Fixed - Non-essential');
+	}
+);
+
+test(
+	'the expense owner list follows the spec',
+	{ meta: { scenario: 'S147' } },
+	async () => {
+		const { page } = await openExpenseForm();
+
+		const owners = await page.getByLabel('Expense owner').locator('option').allTextContents();
+
+		expect(owners).toEqual(['Personal', 'Children', 'Spouse', 'Family', 'Extended Family', 'Friends', 'Other']);
 	}
 );
 
@@ -140,7 +238,7 @@ test(
 	{ meta: { scenario: 'S42' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Expense');
 		await openCategories(page);
 
@@ -158,7 +256,7 @@ test(
 	{ meta: { scenario: 'S46' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Expense');
 		const options = await openCategories(page);
 
@@ -175,7 +273,7 @@ test(
 		const { cookie } = await registered();
 		await post('/?/settings', { currency: 'USD', startDay: '1' }, cookie);
 
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 
 		expect(await page.getByRole('combobox', { name: /^Currency/ }).textContent()).toContain('USD');
 	}
@@ -186,7 +284,7 @@ test(
 	{ meta: { scenario: 'S53' } },
 	async () => {
 		const { name, cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Expense');
 		await page.getByLabel('Amount').pressSequentially('20000');
 		await page.getByRole('combobox', { name: /^Currency/ }).click();
@@ -205,7 +303,7 @@ test(
 	{ meta: { scenario: 'S60' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseType(page, 'Asset / Liability');
 		const acquisition = page.getByLabel(/^Acquisition value/);
 
@@ -217,7 +315,7 @@ test(
 
 test('adding an expense with a blank amount shows the numbers-only message and keeps the typed note', async () => {
 	const { name, cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Expense');
 	await page.getByLabel('Note (optional)').fill('Weekly shop');
 
@@ -235,7 +333,7 @@ test('adding an expense with a blank amount shows the numbers-only message and k
 
 test('choosing the liability class shows the liability term in place of the source of fund', async () => {
 	const { cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Asset / Liability');
 
 	await page.getByLabel('Class').selectOption('Liability');
@@ -246,7 +344,7 @@ test('choosing the liability class shows the liability term in place of the sour
 
 test('after adding an expense under eating out, the page keeps expense and eating out chosen', async () => {
 	const { cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Expense');
 	await page.getByLabel('Amount').pressSequentially('50000');
 	await (await openCategories(page)).getByText('Eating Out', { exact: true }).click();
@@ -260,7 +358,7 @@ test('after adding an expense under eating out, the page keeps expense and eatin
 
 test('typing 98 after the first digit of 1.250.000 inserts it there and shows 198.250.000', async () => {
 	const { cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	const amount = page.getByLabel('Amount');
 	await amount.pressSequentially('1250000');
 	await page.keyboard.press('Home');
@@ -277,12 +375,12 @@ const slashed = (date: Date) =>
 		.join('/');
 
 test(
-	"the add page opens with today's date in the date field as YYYY/MM/DD",
+	"the financial diary page opens with today's date in the date field as YYYY/MM/DD",
 	{ meta: { scenario: 'S62' } },
 	async () => {
 		const { cookie } = await registered();
 
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 
 		expect(await page.getByLabel('Date').inputValue()).toBe(slashed(new Date()));
 	}
@@ -293,7 +391,7 @@ test(
 	{ meta: { scenario: 'S64' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		const today = new Date();
 
 		await page.getByRole('button', { name: 'Open calendar' }).click();
@@ -315,11 +413,11 @@ test(
 	async () => {
 		const { name, cookie } = await registered();
 		await post(
-			'/add',
+			'/diary',
 			{ type: 'asset', date: '2026/10/01', amount: '150.000.000', currency: 'IDR', name: 'Car', cls: 'Other', source: 'Salary' },
 			cookie
 		);
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 		await chooseSale(page);
 		await page.getByLabel('Asset sold').selectOption('Car');
 		await page.getByLabel('Amount').pressSequentially('150000000');
@@ -342,7 +440,7 @@ test(
 	{ meta: { scenario: 'S126' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/add', cookie);
+		const page = await openPage('/diary', cookie);
 
 		await chooseSale(page);
 
@@ -352,7 +450,7 @@ test(
 
 test('adding the goldbar Antam of 2,5 grams at 1.500.000 per gram for 3.000.000 shows a market value of 3.750.000 and stores it', async () => {
 	const { name, cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Asset / Liability');
 	await page.getByLabel('Class').selectOption('Goldbar');
 	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');
@@ -371,7 +469,7 @@ test('adding the goldbar Antam of 2,5 grams at 1.500.000 per gram for 3.000.000 
 
 test('choosing the goldbar class shows a dash as the market value before the user types a weight and a price', async () => {
 	const { cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Asset / Liability');
 
 	await page.getByLabel('Class').selectOption('Goldbar');
@@ -382,7 +480,7 @@ test('choosing the goldbar class shows a dash as the market value before the use
 
 test('adding a goldbar without a weight flags the weight field and keeps the typed price per gram', async () => {
 	const { name, cookie } = await registered();
-	const page = await openPage('/add', cookie);
+	const page = await openPage('/diary', cookie);
 	await chooseType(page, 'Asset / Liability');
 	await page.getByLabel('Class').selectOption('Goldbar');
 	await page.getByLabel('Purchase value (total cost)').pressSequentially('3000000');

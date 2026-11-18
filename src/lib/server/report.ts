@@ -100,7 +100,7 @@ export function loadReport(db: Db, userId: number): Report | null {
 		db
 			.prepare(
 				`SELECT kind, date, amount, category, expense_type AS expenseType
-				FROM entries WHERE user_id = ? AND currency = ?`
+				FROM diary_entries WHERE user_id = ? AND currency = ?`
 			)
 			.all(userId, currency) as Flow[]
 	).map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
@@ -108,7 +108,7 @@ export function loadReport(db: Db, userId: number): Report | null {
 		db
 			.prepare(
 				`SELECT date, name, class, value, source, term, acquisition
-				FROM assets WHERE user_id = ? AND currency = ? ORDER BY date, id`
+				FROM diary_assets WHERE user_id = ? AND currency = ? ORDER BY date, id`
 			)
 			.all(userId, currency) as Holding[]
 	).map((row) => ({ ...row, month: monthOf(row.date, startDay) }));

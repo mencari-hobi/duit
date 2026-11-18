@@ -46,3 +46,11 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I11: Selling an asset turns it into cash without counting the proceeds as earnings
 - Why: The user wants to record a sale by picking the sold asset from the assets they still hold
 - Serves: F20, R57, R58, S122
+
+## Intent I12: The menu, page addresses, and database tables use the names of the revised mockup
+- Why: The revised sidebar names the pages Dashboard, Financial Plan, Financial Diary, Financial Snapshot, and Records, and the tables should match
+- Serves: R12, R60, F21, S19, S23, S85
+
+## Intent I13: The Diary's expense form follows the spec's categories, owners, and default expense types
+- Why: The Spec and Settings sheets detail the income and expense pages
+- Serves: R61, R62, S40
