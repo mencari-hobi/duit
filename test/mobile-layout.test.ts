@@ -104,7 +104,7 @@ test(
 			await addHolding(cookie, { date, amount: `${month}0.000.000`, name: 'Savings account', cls: 'Cash', source: 'Salary' });
 		}
 
-		const page = await openPage('/snapshot', cookie, phoneWidth);
+		const page = await openPage('/snapshot?view=monthly', cookie, phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
@@ -142,6 +142,23 @@ test(
 
 		const page = await openPage('/diary?tab=asset&view=list', cookie, phoneWidth);
 
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);
+
+test(
+	'the snapshot spending report with a line in each section fits a 360 px wide screen',
+	{ meta: { scenario: 'S260' } },
+	async () => {
+		const { cookie } = await registered();
+		await post('/diary', { type: 'income', date: '2026/11/05', amount: '125.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+		await post('/diary', { type: 'expense', date: '2026/11/06', amount: '35.000.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+		await post('/diary', { type: 'asset', date: '2026/11/07', cls: 'Cash', source: 'Salary', unit: '1', unitCurrency: 'IDR', amount: '20.000.000', currency: 'IDR', note: '' }, cookie);
+		await post('/plan?/save', { tab: 'debt', category: 'Non-collateral loan', amount: '4.000.000', currency: 'IDR', start: '2026/01/01', end: '2027/12/31' }, cookie);
+
+		const page = await openPage('/snapshot?period=between&from=2026/11/01&to=2026/11/30', cookie, phoneWidth);
+
+		expect(await page.getByRole('row', { name: /^Non-collateral loan/ }).count()).toBe(1);
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );

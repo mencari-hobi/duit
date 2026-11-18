@@ -80,3 +80,12 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I19: A Paid tick stores the day of the save as its paid date
 - Why: The Spec needs a paid date so a later Spending Report can place each payment in a period, and the user kept the mockup's table without a date column
 - Serves: R90
+
+## Intent I20: The Spending Report compares a chosen period of the Diary with the Plan's budget
+- Why: The Spec leaves "Plan vs actual" open, and the Spending Report answers it with a prorated budget, a variance, and the Plan's ratios
+- Not: notes on report rows, which wait for a later round
+- Serves: F28, F29
+
+## Intent I21: Saving matches purchases to Plan dreams through an optional link
+- Why: The user chose the Spec's proposed "Linked dream" field, so each dream's saving reads against its budget
+- Serves: R96, R99

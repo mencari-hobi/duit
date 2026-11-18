@@ -112,7 +112,8 @@ export function openDatabase(path: string): Db {
 		price: 'REAL',
 		code: 'TEXT',
 		unit: 'REAL',
-		unit_currency: 'TEXT'
+		unit_currency: 'TEXT',
+		dream_id: 'INTEGER REFERENCES plan_savings(id) ON DELETE SET NULL'
 	};
 	for (const [name, type] of Object.entries(added)) {
 		if (!columns.some((column) => column.name === name)) db.exec(`ALTER TABLE diary_assets ADD COLUMN ${name} ${type}`);

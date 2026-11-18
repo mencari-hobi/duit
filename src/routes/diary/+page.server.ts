@@ -4,6 +4,7 @@ import { assetList, heldAssets, savePurchase, saveUpdates } from '#lib/server/as
 import { database, nextAssetCode } from '#lib/server/db.ts';
 import { currentMonth, debtTable, nextDebtCode, reportingMonths, saveDebt, savePayments, todayIso } from '#lib/server/debts.ts';
 import { entryCategories, saveEntry } from '#lib/server/entries.ts';
+import { planDreams } from '#lib/server/plan.ts';
 import { editableRecord } from '#lib/server/records.ts';
 import { readSettings } from '#lib/server/settings.ts';
 import { signedInUser } from '#lib/server/session.ts';
@@ -38,6 +39,7 @@ export const load: PageServerLoad = ({ locals, url }) => {
 		categories: entryCategories(database(), user.id),
 		held: heldAssets(database(), user.id).map((row) => ({ code: row.code, label: assetLabel(row.code, row.name) })),
 		nextCode: nextAssetCode(database(), user.id),
+		dreams: planDreams(database(), user.id),
 		assets: view === 'list' ? assetList(database(), user.id, currency, filter) : null,
 		editing
 	};
@@ -71,7 +73,7 @@ export const actions: Actions = {
 			if ('missing' in result) error(404, 'Entry not found');
 			if ('message' in result) return fail(400, { error: result.message, field: result.field, values });
 			if (values.id) redirect(303, '/records');
-			return { saved: result.saved, values: { type: 'asset', date: values.date, cls: values.cls, source: values.source } };
+			return { saved: result.saved, values: { type: 'asset', date: values.date, cls: values.cls, source: values.source, dream: values.dream } };
 		}
 		const result = saveEntry(database(), userId, values);
 		if ('missing' in result) error(404, 'Entry not found');

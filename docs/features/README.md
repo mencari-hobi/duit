@@ -20,7 +20,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S41: On a 360 px wide screen, `/diary` fits the screen width and shows the whole "Add entry" button
   - Scenario S86: On a 360 px wide screen, `/` with a year of entries fits the screen width, and every chart fits its card
   - Scenario S104: On a 360 px wide screen, `/records` with entries fits the screen width
-  - Scenario S120: On a 360 px wide screen, `/snapshot` with three months of entries fits the screen width
+  - Scenario S120: On a 360 px wide screen, `/snapshot` on Monthly report with three months of entries fits the screen width
+  - Scenario S260: On a 360 px wide screen, `/snapshot` on Spending Report with a line in each section fits the screen width
   - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
   - Scenario S211: On a 360 px wide screen, `/diary` on the Asset list with an asset fits the screen width
   - Scenario S238: On a 360 px wide screen, `/diary` on Debt payment with a debt fits the screen width
@@ -137,6 +138,10 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S196: Choosing "Edit" on the purchase of "AST-0001" in Records opens the Purchase form filled, with a "Save changes" button
   - Scenario S197: Saving the type "Mutual Fund" on that purchase moves every update of "AST-0001" to "Mutual Fund"
   - Scenario S198: Deleting the purchase of "AST-0001" removes every update of "AST-0001"
+- Rule R99: A purchase can link to a dream of the Financial Plan
+  - Scenario S256: "Linked dream" lists "None" and each dream of the Plan, and saving a purchase linked to "House" stores that link
+  - Scenario S257: Choosing "Edit" on that purchase in Records opens it with "House" chosen under "Linked dream"
+  - Scenario S258: Deleting the dream "House" in the Plan keeps its purchases, now without a linked dream
 
 ### Feature F25: Asset list and updates
 - Rule R80: The Asset list shows each held asset with its latest value and its gain or loss over cost
@@ -278,6 +283,36 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S103: Deleting all data leaves the entries of another account stored
 
 ## Area A8: App › Financial Snapshot
+
+### Feature F28: Spending Report period
+- Rule R100: The Snapshot opens on "Spending Report", and "Monthly report" shows the 3-month report
+  - Scenario S259: Opening `/snapshot` shows the Spending Report, and choosing "Monthly report" shows the columns of the last three reporting months
+- Rule R92: The Spending Report covers the chosen period, and opens on "Last month"
+  - Scenario S239: With the reporting start day 25 on 2026/11/18, the report opens on "Last month" and reads "2026/09/25 – 2026/10/24" (happy path)
+  - Scenario S240: "On" 2026/11/03 covers that day alone
+  - Scenario S241: "Before" 2026/11/03 covers every date up to 2026/11/02, from the earliest Diary date
+  - Scenario S242: "Between" 2026/11/01 and 2026/11/10 covers both end dates
+  - Scenario S243: "Last 7 days" on 2026/11/18 covers 2026/11/12 to 2026/11/18
+  - Scenario S244: "Between" with the end before the start reads "The end date cannot be before the start date."
+- Rule R93: The budget of a period is the Plan's monthly amount times 1 for exactly one reporting month, and times its days ÷ 30 otherwise
+  - Scenario S245: A Plan salary of 10.000.000 monthly reads a budget of 10.000.000 for "Last month", and 2.333.333 for "Last 7 days"
+
+### Feature F29: Spending Report lines
+- Rule R94: Income compares the Diary income of each category with the Plan
+  - Scenario S246: A Diary salary of 9.000.000 against a Plan salary of 10.000.000 reads Actual "9.000.000", Budget "10.000.000", Variance "−1.000.000", and "−10.0%" in the unfavourable tone (happy path)
+  - Scenario S247: A sale of an asset in the period stays out of income
+- Rule R95: Debt payment counts each installment ticked Paid with a paid date inside the period, by debt category
+  - Scenario S248: "DBT-0001" ticked for 2026-11 on 2026/11/18, due 5.200.000, reads Actual 5.200.000 under "Car installment" for a period covering 2026/11/18, and 0 for a period ending 2026/11/17
+  - Scenario S249: A Plan "Car installment" of 5.000.000 running through the period reads Budget 5.000.000, and the actual 5.200.000 reads "+200.000" in the unfavourable tone
+- Rule R96: Saving counts the asset purchases dated inside the period, by linked dream
+  - Scenario S250: A purchase of 2.000.000 linked to "House" reads Actual 2.000.000 on "House", against the dream's monthly saving as Budget
+  - Scenario S251: A purchase without a linked dream reads under "Other saving" without a budget, and a later valuation of an asset adds no saving
+- Rule R97: Expense compares the Diary expenses of each expense type and category with the Plan
+  - Scenario S252: A Diary grocery of 3.000.000 "Non-fixed - Essential" against a Plan grocery of 4.000.000 reads "−1.000.000" under "Non-fixed - Essential" › "Grocery" in the favourable tone
+- Rule R98: Free cash flow and the four Plan ratios compare actual with budget
+  - Scenario S253: Income 10.000.000, debt payment 2.000.000, saving 1.000.000, and expense 4.000.000 read "Free Cash Flow" Actual 3.000.000
+  - Scenario S254: An actual saving ratio of 10.0% against a budget of 20.0% reads "−1.000 bps"
+  - Scenario S255: A period without income reads "–" for each actual ratio
 
 ### Feature F19: Monthly report
 - Rule R47: The report compares the last three reporting months, oldest first

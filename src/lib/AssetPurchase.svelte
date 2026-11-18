@@ -12,12 +12,13 @@
 		currency: string;
 		today: string;
 		nextCode: string;
+		dreams: { id: number; dream: string }[];
 		error?: string;
 		invalid?: string;
 		saved?: string;
 	};
 
-	let { kept, editing, currency, today, nextCode, error, invalid, saved }: Props = $props();
+	let { kept, editing, currency, today, nextCode, dreams, error, invalid, saved }: Props = $props();
 
 	const unitCurrencies = ['IDR', 'USD', 'SGD', 'EUR', 'AUD', 'JPY', 'GBP', 'CHF', 'HKD', 'CNY', 'MYR'];
 
@@ -105,6 +106,16 @@
 			<p class="text-sm font-medium">Cost / unit</p>
 			<p class="flex h-11 items-center rounded-lg bg-primary/10 px-3 font-semibold text-primary tabular-nums">{perUnit ?? '–'}</p>
 			<p class="text-sm text-muted-foreground">Acquisition cost ÷ Unit</p>
+		</div>
+		<div class="flex flex-col gap-1.5">
+			<Label for="dream">Linked dream</Label>
+			<select id="dream" name="dream" class={select}>
+				<option value="">None</option>
+				{#each dreams as option (option.id)}
+					<option value={String(option.id)} selected={String(option.id) === kept.dream}>{option.dream}</option>
+				{/each}
+			</select>
+			<p class="text-sm text-muted-foreground">A dream from the Financial Plan this purchase saves for</p>
 		</div>
 		<div class="flex flex-col gap-1.5 md:col-span-2">
 			<Label for="note">Note (optional)</Label>

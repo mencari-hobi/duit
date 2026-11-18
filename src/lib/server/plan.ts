@@ -111,6 +111,9 @@ export function savePlanItem(db: Db, userId: number, fields: Fields): Refusal | 
 	}
 }
 
+export const planDreams = (db: Db, userId: number) =>
+	db.prepare('SELECT id, dream FROM plan_savings WHERE user_id = ? ORDER BY id').all(userId) as { id: number; dream: string }[];
+
 export function deletePlanItem(db: Db, userId: number, key: string) {
 	const item = itemKey(key);
 	if (item) db.prepare(`DELETE FROM ${item.table} WHERE id = ? AND user_id = ?`).run(item.id, userId);
