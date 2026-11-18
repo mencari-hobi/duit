@@ -21,6 +21,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S86: On a 360 px wide screen, `/` with a year of entries fits the screen width, and every chart fits its card
   - Scenario S104: On a 360 px wide screen, `/records` with entries fits the screen width
   - Scenario S120: On a 360 px wide screen, `/snapshot` with three months of entries fits the screen width
+  - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -132,6 +133,67 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R28: The acquisition value groups thousands with a dot as the user types, like the amount
   - Scenario S60: Typing 12500000 into the acquisition value shows "12.500.000"
   - Scenario S61: Adding an asset with the acquisition value "12.500.000" stores 12500000
+
+## Area A9: App › Financial Plan
+
+### Feature F22: Plan items
+- Rule R64: An item added on a Plan tab stays with the account
+  - Scenario S150: Adding a "Monthly" income of 18.000.000 under "Salary" with the note "Office" stores it and shows "Added ✓" (happy path)
+  - Scenario S151: Adding a "Monthly" expense of 2.500.000 under "Grocery", "Non-fixed - Essential", and "Personal" stores it
+  - Scenario S152: Adding the dream "Emergency fund" of 60.000.000 in 12 months stores it
+  - Scenario S153: Adding a "Mortgage" installment of 3.000.000 from 2026/11/25 to 2031/10/25 stores it
+- Rule R65: A Plan tab refuses an item missing a required field
+  - Scenario S155: Adding an income with a blank amount shows "Please enter an amount (numbers only)." and stores nothing
+  - Scenario S156: Adding a saving with a blank dream shows "Please name your dream." and stores nothing
+  - Scenario S157: Adding a saving over 0 months shows "Please enter a whole number of months, 1 or more." and stores nothing
+  - Scenario S158: Adding a debt payment that ends before it starts shows "The end payment can't be before the start payment." and stores nothing
+- Rule R66: The Plan's lists follow the spec
+  - Scenario S159: The Income categories read "Salary", "Freelance", "Dividend", "Bonus", and "Other"
+  - Scenario S160: The Expense categories are the Diary's 17, from "Grocery" to "Birthday/Anniversary/Holiday"
+  - Scenario S161: Choosing "School Tuition" on the Expense tab fills the expense type "Fixed - Essential"
+  - Scenario S162: The Expense owners read "Personal", "Children", "Spouse", "Family", "Extended Family", "Friends", and "Other"
+  - Scenario S163: The Debt payment categories read "Credit card", "Mortgage", "Car installment", "Non-collateral loan", and "Other loan"
+  - Scenario S164: The Timeframe list reads "Daily", "Weekly", "Monthly", "Quarterly", and "Annually", with "Monthly" chosen
+- Rule R67: The Saving tab shows the amount to save per month as the user types
+  - Scenario S165: Typing 60.000.000 and 12 months reads "IDR 5.000.000 per month" under "I need to save"
+
+### Feature F23: View budget
+- Rule R68: View budget converts each item to the chosen timeframe, with a month as 30 days, 4 weeks, 1/3 quarter, or 1/12 year
+  - Scenario S166: A "Weekly" income of 500.000 reads 2.000.000 with "Monthly" chosen (happy path)
+  - Scenario S167: A "Monthly" income of 18.000.000 reads 4.500.000 with "Weekly" chosen, under the header "IDR per week"
+  - Scenario S168: An "Annually" income of 12.000.000 reads 1.000.000 with "Monthly" chosen
+  - Scenario S169: A saving of 60.000.000 in 12 months reads 5.000.000 with "Monthly" chosen
+- Rule R69: View budget lists each item as a row under "Income", "Debt payment", "Saving", or "Expense", with expenses also grouped by expense type
+  - Scenario S170: Incomes of 18.000.000 under "Salary" and 2.000.000 under "Freelance" read "Income" 20.000.000 over a "Salary" row and a "Freelance" row
+  - Scenario S171: Installments of 3.000.000 under "Mortgage" and 1.500.000 under "Car installment" read "Debt payment" 4.500.000
+  - Scenario S172: Expenses of 650.000 under "School Tuition" and 450.000 under "Internet" as "Fixed - Essential" read "Expense" and "Fixed - Essential" 1.100.000 each, over both category rows
+- Rule R70: A debt payment counts while today falls between its start and end payment
+  - Scenario S173: An installment starting next month stays out of "Debt payment"
+  - Scenario S174: An installment that ended last month stays out of "Debt payment"
+  - Scenario S189: An installment outside its payment dates lists under "Not counted today", where "Edit" and "Delete" reach it
+- Rule R71: Free Cash Flow is Income − Debt payment − Saving − Expense
+  - Scenario S175: Income of 20.000.000, debt payment of 4.500.000, saving of 5.000.000, and expense of 7.100.000 read "Free Cash Flow" 3.400.000
+- Rule R72: View budget shows four ratios of income
+  - Scenario S176: Those figures read "Debt Service Ratio" 22.5%, "Saving Ratio" 25.0%, "Essential Expense Ratio" 21.0%, and "Free Cash Flow Ratio" 17.0%
+  - Scenario S177: A plan without income reads "–" for every ratio
+- Rule R73: View budget counts only the account's items in its default currency
+  - Scenario S178: With the default currency "IDR", an income in "USD" stays out of every total
+  - Scenario S190: An income in "USD" lists under "Not counted today", where "Edit" and "Delete" reach it
+  - Scenario S154: Another account's items stay out of View budget
+- Rule R74: A plan without items reads "Nothing planned yet."
+  - Scenario S179: A new account's View budget reads "Nothing planned yet."
+
+### Feature F24: Plan item editing
+- Rule R75: "Edit" on a View budget row opens the item on its tab, and saving replaces it
+  - Scenario S180: Choosing "Edit" on a "Salary" income opens the Income tab with every field filled and a "Save changes" button (happy path)
+  - Scenario S181: Saving 19.000.000 on the edited income stores 19000000 on the same item, adds none, and opens View budget
+  - Scenario S182: Choosing "Edit" on a "Grocery" expense opens the Expense tab with its expense type and owner filled
+  - Scenario S183: Choosing "Edit" on the dream "Emergency fund" opens the Saving tab with its amount and months filled
+  - Scenario S184: Choosing "Edit" on a "Mortgage" installment opens the Debt payment tab with its start and end payment filled
+  - Scenario S185: Saving changes to another account's item leaves it unchanged
+- Rule R76: "Delete" on a View budget row removes that item
+  - Scenario S186: Deleting a "Salary" income removes it from View budget and from storage (happy path)
+  - Scenario S187: Deleting another account's item leaves it stored
 
 ## Area A7: App › Records
 

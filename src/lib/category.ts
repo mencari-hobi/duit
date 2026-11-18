@@ -6,6 +6,10 @@ export const capitalize = (name: string) =>
 
 export const sale = 'sales of asset';
 
+export const expenseTypes = ['Fixed - Essential', 'Non-fixed - Essential', 'Fixed - Non-essential', 'Non-fixed - Non-essential'];
+
+export const owners = ['Personal', 'Children', 'Spouse', 'Family', 'Extended Family', 'Friends', 'Other'];
+
 export const expenseDefaults: Record<string, string> = {
 	grocery: 'Non-fixed - Essential',
 	'eating out': 'Non-fixed - Non-essential',

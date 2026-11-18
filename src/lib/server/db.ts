@@ -67,6 +67,23 @@ export function openDatabase(path: string): Db {
 			owner TEXT,
 			note TEXT NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS plan_savings (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			dream TEXT NOT NULL,
+			amount REAL NOT NULL,
+			currency TEXT NOT NULL,
+			months INTEGER NOT NULL CHECK (months >= 1)
+		);
+		CREATE TABLE IF NOT EXISTS plan_debts (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			category TEXT NOT NULL,
+			amount REAL NOT NULL,
+			currency TEXT NOT NULL,
+			start TEXT NOT NULL,
+			end TEXT NOT NULL
+		);
 	`);
 	const columns = db.prepare('PRAGMA table_info(diary_assets)').all() as { name: string }[];
 	const added = { sale_id: 'INTEGER REFERENCES diary_entries(id) ON DELETE CASCADE', weight: 'REAL', price: 'REAL' };

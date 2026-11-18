@@ -54,3 +54,11 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I13: The Diary's expense form follows the spec's categories, owners, and default expense types
 - Why: The Spec and Settings sheets detail the income and expense pages
 - Serves: R61, R62, S40
+
+## Intent I14: The Financial Plan sets a budget from planned income, expense, saving, and debt payment, in any timeframe
+- Why: The Spec and the mockup make the Plan the budget the Snapshot checks spending against
+- Serves: F22, F23, S188
+
+## Intent I15: A wrong plan item gets fixed where the budget shows it
+- Why: The user chose Edit and Delete on the View budget rows
+- Serves: F24
