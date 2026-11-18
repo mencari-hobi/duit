@@ -141,12 +141,12 @@ export function loadDashboard(db: Db, userId: number, from: string, to: string) 
 	const allFlows = db
 		.prepare(
 			`SELECT kind, date, amount, currency, category, expense_type AS expenseType, owner
-			FROM entries WHERE user_id = ?`
+			FROM diary_entries WHERE user_id = ?`
 		)
 		.all(userId) as Flow[];
 	const allHoldings = db
 		.prepare(
-			'SELECT date, name, class, value, currency, source, term FROM assets WHERE user_id = ? ORDER BY date, id'
+			'SELECT date, name, class, value, currency, source, term FROM diary_assets WHERE user_id = ? ORDER BY date, id'
 		)
 		.all(userId) as Holding[];
 	const leftOut = [...allFlows, ...allHoldings].filter((row) => row.currency !== currency).length;

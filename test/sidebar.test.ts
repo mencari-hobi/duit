@@ -14,10 +14,10 @@ async function phoneWithMenuOpen() {
 }
 
 test(
-	'opening add, records, or report without a session cookie redirects to login',
+	'opening plan, diary, records, or snapshot without a session cookie redirects to login',
 	{ meta: { scenario: 'S19' } },
 	async () => {
-		for (const path of ['/add', '/records', '/report']) {
+		for (const path of ['/plan', '/diary', '/records', '/snapshot']) {
 			const response = await get(path);
 
 			expect(response.headers.get('location')).toBe('/login');
@@ -30,14 +30,15 @@ test(
 	{ meta: { scenario: 'S20' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/report', cookie);
+		const page = await openPage('/snapshot', cookie);
 		const menu = page.getByRole('navigation', { name: 'Menu' });
 
 		for (const [label, path] of [
 			['Dashboard', '/'],
-			['Add', '/add'],
-			['Records', '/records'],
-			['Report', '/report']
+			['Financial Plan', '/plan'],
+			['Financial Diary', '/diary'],
+			['Financial Snapshot', '/snapshot'],
+			['Records', '/records']
 		]) {
 			await menu.getByRole('link', { name: label }).click();
 			await page.waitForURL((url) => url.pathname === path);
@@ -60,9 +61,10 @@ test(
 
 		expect(marks).toEqual([
 			['Dashboard', null],
-			['Add', null],
-			['Records', 'page'],
-			['Report', null]
+			['Financial Plan', null],
+			['Financial Diary', null],
+			['Financial Snapshot', null],
+			['Records', 'page']
 		]);
 	}
 );
@@ -83,13 +85,13 @@ test(
 );
 
 test(
-	'on a 360 px wide screen, choosing Add in the open sidebar opens add with the sidebar hidden',
+	'on a 360 px wide screen, choosing Financial Diary in the open sidebar opens diary with the sidebar hidden',
 	{ meta: { scenario: 'S23' } },
 	async () => {
 		const { page, menu } = await phoneWithMenuOpen();
 
-		await menu.getByRole('link', { name: 'Add' }).click();
-		await page.waitForURL((url) => url.pathname === '/add');
+		await menu.getByRole('link', { name: 'Financial Diary' }).click();
+		await page.waitForURL((url) => url.pathname === '/diary');
 
 		await expect.poll(() => menu.isVisible()).toBe(false);
 	}
@@ -130,4 +132,24 @@ test('on a 360 px wide screen, pressing Enter on the focused Menu button hides t
 	await page.getByRole('button', { name: 'Menu', exact: true }).press('Enter');
 
 	await expect.poll(() => menu.isVisible()).toBe(false);
+});
+
+test(
+	'opening add with an entry to edit redirects to diary with the same entry',
+	{ meta: { scenario: 'S140' } },
+	async () => {
+		const { cookie } = await registered();
+
+		const response = await get('/add?edit=e42', cookie);
+
+		expect(response.headers.get('location')).toBe('/diary?edit=e42');
+	}
+);
+
+test('opening report redirects to snapshot', { meta: { scenario: 'S141' } }, async () => {
+	const { cookie } = await registered();
+
+	const response = await get('/report', cookie);
+
+	expect(response.headers.get('location')).toBe('/snapshot');
 });

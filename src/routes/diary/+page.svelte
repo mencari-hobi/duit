@@ -9,7 +9,7 @@
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import { group, parseAmount, regroup, sizeOf } from '#lib/amount.ts';
-	import { capitalize, sale } from '#lib/category.ts';
+	import { capitalize, expenseDefaults, sale } from '#lib/category.ts';
 	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
@@ -26,15 +26,10 @@
 
 	const defaults = {
 		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
-		expense: [
-			'grocery', 'eating out', 'electricity', 'gasoline & tolls', 'school tuition', 'phone credit',
-			'internet', 'self care/entertainment', 'clothes', 'sports/gym', 'healthcare', 'courses',
-			'gift & charity', 'house maintenance', 'car maintenance', 'housekeeping',
-			'birthday/anniversary/holiday', 'mortgage', 'car installment', 'debt payment', 'other installment'
-		]
+		expense: Object.keys(expenseDefaults)
 	};
 	const expenseTypes = ['Fixed - Essential', 'Non-fixed - Essential', 'Fixed - Non-essential', 'Non-fixed - Non-essential'];
-	const owners = ['Personal', 'Spouse', 'Children', 'Family', 'Extended Family'];
+	const owners = ['Personal', 'Children', 'Spouse', 'Family', 'Extended Family', 'Friends', 'Other'];
 	const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other', 'Liability'];
 	const sources = ['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Debt'];
 	const terms = ['Short term', 'Long term'];
@@ -71,6 +66,11 @@
 		type === 'asset' ? [] : [...new Set([...defaults[type], ...data.categories[type]])]
 	);
 	let category = $derived((kept.type === type && kept.category) || list[0]);
+	let lastType = untrack(() => kept.expenseType) || expenseTypes[0];
+	let expenseType = $derived.by(() => {
+		lastType = (category === kept.category && kept.expenseType) || expenseDefaults[category] || lastType;
+		return lastType;
+	});
 	const held = $derived(
 		[...new Set([...data.held, ...(editing?.asset ? [editing.asset] : [])])].sort()
 	);
@@ -128,7 +128,7 @@
 		</div>
 	{/if}
 	<div class="flex flex-wrap items-center justify-between gap-3">
-		<h1 class="text-3xl">{editing ? 'Edit' : 'Add'}</h1>
+		<h1 class="text-3xl">{editing ? 'Edit' : 'Financial Diary'}</h1>
 		<fieldset class="flex w-full rounded-full border bg-card p-1 sm:w-auto">
 			<legend class="sr-only">Entry type</legend>
 			{#each types as [value, label] (value)}
@@ -378,7 +378,20 @@
 				</div>
 			{/if}
 			{#if type === 'expense'}
-				{@render choice('expense-type', 'expenseType', 'Expense type', expenseTypes, kept.expenseType)}
+				<div class="flex flex-col gap-1.5">
+					<Label for="expense-type">Expense type</Label>
+					<select
+						id="expense-type"
+						name="expenseType"
+						class={select}
+						value={expenseType}
+						onchange={(event) => (expenseType = lastType = event.currentTarget.value)}
+					>
+						{#each expenseTypes as option (option)}
+							<option>{option}</option>
+						{/each}
+					</select>
+				</div>
 				{@render choice('owner', 'owner', 'Expense owner', owners, kept.owner)}
 			{/if}
 		{/if}

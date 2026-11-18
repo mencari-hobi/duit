@@ -136,7 +136,7 @@
 {#if !board.cards}
 	<Card.Root>
 		<Card.Content class="py-6 text-center text-base text-muted-foreground">
-			No data yet. Add your first entry on the <a href="/add">Add page</a>.
+			No data yet. Add your first entry on the <a href="/diary">Financial Diary page</a>.
 		</Card.Content>
 	</Card.Root>
 {:else}

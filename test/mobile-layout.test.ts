@@ -40,12 +40,12 @@ test(
 );
 
 test(
-	'the add page fits a 360 px wide screen and shows the whole "Add entry" button',
+	'the financial diary page fits a 360 px wide screen and shows the whole "Add entry" button',
 	{ meta: { scenario: 'S41' } },
 	async () => {
 		const { cookie } = await registered();
 
-		const page = await openPage('/add', cookie, phoneWidth);
+		const page = await openPage('/diary', cookie, phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 		await expectWholeOnScreen(page, 'Add entry');
@@ -59,8 +59,8 @@ test(
 		const { cookie } = await registered();
 		for (let month = 1; month <= 12; month++) {
 			const date = `2026/${String(month).padStart(2, '0')}/05`;
-			await post('/add', { type: 'income', date, amount: '9.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
-			await post('/add', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
+			await post('/diary', { type: 'income', date, amount: '9.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+			await post('/diary', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
 		}
 
 		const page = await openPage('/', cookie, phoneWidth);
@@ -82,8 +82,8 @@ test(
 	{ meta: { scenario: 'S104' } },
 	async () => {
 		const { cookie } = await registered();
-		await post('/add', { type: 'expense', date: '2026/11/02', amount: '1.250.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
-		await post('/add', { type: 'asset', date: '2026/11/05', amount: '120.000.000', currency: 'IDR', name: 'Savings account at a bank with a long name', cls: 'Investments', source: 'Freelance', note: '' }, cookie);
+		await post('/diary', { type: 'expense', date: '2026/11/02', amount: '1.250.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+		await post('/diary', { type: 'asset', date: '2026/11/05', amount: '120.000.000', currency: 'IDR', name: 'Savings account at a bank with a long name', cls: 'Investments', source: 'Freelance', note: '' }, cookie);
 
 		const page = await openPage('/records', cookie, phoneWidth);
 
@@ -98,12 +98,12 @@ test(
 		const { cookie } = await registered();
 		for (const month of ['09', '10', '11']) {
 			const date = `2026/${month}/05`;
-			await post('/add', { type: 'income', date, amount: '125.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
-			await post('/add', { type: 'expense', date, amount: '35.000.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
-			await post('/add', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
+			await post('/diary', { type: 'income', date, amount: '125.000.000', currency: 'IDR', category: 'salary', note: '' }, cookie);
+			await post('/diary', { type: 'expense', date, amount: '35.000.000', currency: 'IDR', category: 'birthday/anniversary/holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' }, cookie);
+			await post('/diary', { type: 'asset', date, amount: `${month}0.000.000`, currency: 'IDR', name: 'Savings account', cls: 'Cash', source: 'Salary', note: '' }, cookie);
 		}
 
-		const page = await openPage('/report', cookie, phoneWidth);
+		const page = await openPage('/snapshot', cookie, phoneWidth);
 
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}

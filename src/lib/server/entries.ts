@@ -28,7 +28,7 @@ function parseCommon(fields: EntryFields): Refusal | Common {
 function lastAcquisition(db: Db, userId: number, name: string) {
 	const row = db
 		.prepare(
-			`SELECT acquisition FROM assets WHERE user_id = ? AND name = ? AND acquisition IS NOT NULL
+			`SELECT acquisition FROM diary_assets WHERE user_id = ? AND name = ? AND acquisition IS NOT NULL
 			ORDER BY date DESC, id DESC LIMIT 1`
 		)
 		.get(userId, name) as { acquisition: number } | undefined;
@@ -58,7 +58,7 @@ function addAsset(db: Db, userId: number, fields: EntryFields, common: Common, i
 			? common.amount
 			: (parseAmount(field(fields, 'acquisition')) ?? lastAcquisition(db, userId, name) ?? common.amount);
 	db.prepare(
-		`INSERT INTO assets (id, user_id, date, name, class, value, currency, source, term, acquisition, weight, price, note)
+		`INSERT INTO diary_assets (id, user_id, date, name, class, value, currency, source, term, acquisition, weight, price, note)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	).run(
 		id,
@@ -82,7 +82,7 @@ type Holding = { name: string; class: string; value: number; currency: string; s
 
 function latestHoldings(db: Db, userId: number) {
 	const rows = db
-		.prepare('SELECT name, class, value, currency, source FROM assets WHERE user_id = ? ORDER BY date, id')
+		.prepare('SELECT name, class, value, currency, source FROM diary_assets WHERE user_id = ? ORDER BY date, id')
 		.all(userId) as Holding[];
 	const latest = new Map(rows.map((row) => [row.name, row]));
 	return [...latest.values()].filter((row) => row.class !== 'Liability' && row.value > 0);
@@ -99,12 +99,12 @@ function addSale(db: Db, userId: number, fields: EntryFields, common: Common, id
 	if (!sold) return { message: 'Choose the asset that was sold.', field: 'asset' };
 	const entry = db
 		.prepare(
-			`INSERT INTO entries (id, user_id, kind, date, amount, currency, category, note)
+			`INSERT INTO diary_entries (id, user_id, kind, date, amount, currency, category, note)
 			VALUES (?, ?, 'income', ?, ?, ?, ?, ?)`
 		)
 		.run(id, userId, common.date, common.amount, common.currency, sale, common.note || `Sale of ${sold.name}`);
 	db.prepare(
-		`INSERT INTO assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id)
+		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id)
 		VALUES (?, ?, ?, ?, 0, ?, ?, 0, '', ?)`
 	).run(userId, common.date, sold.name, sold.class, sold.currency, sold.source, entry.lastInsertRowid);
 	return { added: true };
@@ -114,7 +114,7 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 	const expense = fields.type === 'expense';
 	if (!expense && field(fields, 'category').toLowerCase() === sale) return addSale(db, userId, fields, common, id);
 	db.prepare(
-		`INSERT INTO entries (id, user_id, kind, date, amount, currency, category, expense_type, owner, note)
+		`INSERT INTO diary_entries (id, user_id, kind, date, amount, currency, category, expense_type, owner, note)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	).run(
 		id,
@@ -155,7 +155,7 @@ export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal 
 	if (!old || !db.prepare(`SELECT 1 FROM ${old.table} WHERE id = ? AND user_id = ?`).get(old.id, userId)) {
 		return { missing: true };
 	}
-	const table = fields.type === 'asset' ? 'assets' : 'entries';
+	const table = fields.type === 'asset' ? 'diary_assets' : 'diary_entries';
 	try {
 		return db.transaction(() => {
 			db.prepare(`DELETE FROM ${old.table} WHERE id = ?`).run(old.id);
@@ -171,7 +171,7 @@ export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal 
 
 export function entryCategories(db: Db, userId: number) {
 	const rows = db
-		.prepare('SELECT DISTINCT kind, category FROM entries WHERE user_id = ? ORDER BY category')
+		.prepare('SELECT DISTINCT kind, category FROM diary_entries WHERE user_id = ? ORDER BY category')
 		.all(userId) as { kind: 'income' | 'expense'; category: string }[];
 	return {
 		income: rows.filter((row) => row.kind === 'income').map((row) => row.category),

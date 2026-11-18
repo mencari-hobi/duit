@@ -4,12 +4,12 @@ import { post, registered } from './app';
 import { openPage } from './browser';
 
 function addIncome(cookie: string, date: string, amount: string) {
-	return post('/add', { type: 'income', date, amount, currency: 'IDR', category: 'salary', note: '' }, cookie);
+	return post('/diary', { type: 'income', date, amount, currency: 'IDR', category: 'salary', note: '' }, cookie);
 }
 
 function addExpense(cookie: string, date: string, amount: string) {
 	return post(
-		'/add',
+		'/diary',
 		{
 			type: 'expense',
 			date,
@@ -97,23 +97,23 @@ test(
 );
 
 test(
-	'a new account opening the dashboard reads the empty message, and its link opens add',
+	'a new account opening the dashboard reads the empty message, and its link opens diary',
 	{ meta: { scenario: 'S85' } },
 	async () => {
 		const { cookie } = await registered();
 		const page = await openPage('/', cookie);
 
 		expect(await page.getByText('No data yet.').textContent()).toBe(
-			'No data yet. Add your first entry on the Add page.'
+			'No data yet. Add your first entry on the Financial Diary page.'
 		);
-		await page.getByRole('link', { name: 'Add page' }).click();
-		await page.waitForURL((url) => url.pathname === '/add');
+		await page.getByRole('link', { name: 'Financial Diary page' }).click();
+		await page.waitForURL((url) => url.pathname === '/diary');
 	}
 );
 
 function addAsset(cookie: string, date: string, name: string, amount: string, fields: Record<string, string> = {}) {
 	return post(
-		'/add',
+		'/diary',
 		{ type: 'asset', date, amount, currency: 'IDR', name, cls: 'Cash', source: 'Salary', note: '', ...fields },
 		cookie
 	);
@@ -121,7 +121,7 @@ function addAsset(cookie: string, date: string, name: string, amount: string, fi
 
 function addDollarExpense(cookie: string, date: string, amount: string) {
 	return post(
-		'/add',
+		'/diary',
 		{
 			type: 'expense',
 			date,

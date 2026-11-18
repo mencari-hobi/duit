@@ -8,13 +8,13 @@ export function listRecords(db: Db, userId: number): Record[] {
 	const flows = db
 		.prepare(
 			`SELECT id, kind, date, amount, currency, note, category, expense_type AS expenseType, owner
-			FROM entries WHERE user_id = ?`
+			FROM diary_entries WHERE user_id = ?`
 		)
 		.all(userId) as Row[];
 	const holdings = db
 		.prepare(
 			`SELECT id, 'asset' AS kind, date, value AS amount, currency, note, name, class AS cls, source, term, acquisition, weight, price
-			FROM assets WHERE user_id = ?`
+			FROM diary_assets WHERE user_id = ?`
 		)
 		.all(userId) as Row[];
 	return [...flows, ...holdings]
@@ -25,7 +25,7 @@ export function listRecords(db: Db, userId: number): Record[] {
 export function recordKey(key: string) {
 	const match = /^([ea])(\d+)$/.exec(key);
 	if (!match) return null;
-	return { table: match[1] === 'a' ? 'assets' : 'entries', id: Number(match[2]) };
+	return { table: match[1] === 'a' ? 'diary_assets' : 'diary_entries', id: Number(match[2]) };
 }
 
 export function editableRecord(db: Db, userId: number, key: string): { [field: string]: string } | null {
@@ -61,7 +61,7 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 }
 
 function soldAsset(db: Db, saleId: number) {
-	const row = db.prepare('SELECT name FROM assets WHERE sale_id = ?').get(saleId) as { name: string } | undefined;
+	const row = db.prepare('SELECT name FROM diary_assets WHERE sale_id = ?').get(saleId) as { name: string } | undefined;
 	return row?.name ?? '';
 }
 
@@ -72,7 +72,7 @@ export function deleteRecord(db: Db, userId: number, key: string) {
 
 export function wipeRecords(db: Db, userId: number) {
 	db.transaction(() => {
-		db.prepare('DELETE FROM entries WHERE user_id = ?').run(userId);
-		db.prepare('DELETE FROM assets WHERE user_id = ?').run(userId);
+		db.prepare('DELETE FROM diary_entries WHERE user_id = ?').run(userId);
+		db.prepare('DELETE FROM diary_assets WHERE user_id = ?').run(userId);
 	})();
 }

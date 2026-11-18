@@ -16,9 +16,10 @@
 
 	const menu = [
 		{ href: '/', label: 'Dashboard' },
-		{ href: '/add', label: 'Add' },
-		{ href: '/records', label: 'Records' },
-		{ href: '/report', label: 'Report' }
+		{ href: '/plan', label: 'Financial Plan' },
+		{ href: '/diary', label: 'Financial Diary' },
+		{ href: '/snapshot', label: 'Financial Snapshot' },
+		{ href: '/records', label: 'Records' }
 	];
 </script>
 

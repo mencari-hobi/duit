@@ -70,7 +70,7 @@
 		</div>
 		<p class="font-heading text-xl">Nothing here yet.</p>
 		<p class="max-w-xs text-sm text-muted-foreground">Every income, expense, and asset you add lists here, newest first.</p>
-		<Button href="/add" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
+		<Button href="/diary" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
 	</div>
 {:else}
 	<div class="flex flex-col gap-5 lg:hidden">
@@ -83,7 +83,7 @@
 					{#each rows as record (record.id)}
 						<li class="flex items-center pr-1">
 							<a
-								href="/add?edit={record.id}"
+								href="/diary?edit={record.id}"
 								aria-label="Edit {label(record)} of {date}"
 								class="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 text-foreground no-underline hover:no-underline"
 							>
@@ -141,7 +141,7 @@
 							</Table.Cell>
 							<Table.Cell class="pr-2 text-right">
 								<span class="inline-flex gap-1">
-									<Button href="/add?edit={record.id}" variant="ghost" size="sm"><PencilIcon />Edit</Button>
+									<Button href="/diary?edit={record.id}" variant="ghost" size="sm"><PencilIcon />Edit</Button>
 									{@render remove(record)}
 								</span>
 							</Table.Cell>
