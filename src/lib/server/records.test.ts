@@ -4,6 +4,7 @@ import { register } from './auth';
 import { openDatabase, type Db } from './db';
 import { heldAssets, savePurchase, saveUpdates } from './assets';
 import { addEntry, saveEntry } from './entries';
+import { oldLiability } from './holdings-fixture';
 import { deleteRecord, editableRecord, listRecords, wipeRecords } from './records';
 
 let db: Db;
@@ -59,16 +60,7 @@ const asset = (fields: Record<string, string> = {}) => ({
 const buy = (userId: number, fields: Record<string, string> = {}) => savePurchase(db, userId, asset(fields));
 
 const liability = (fields: Record<string, string> = {}) =>
-	addEntry(db, alice, {
-		type: 'debt',
-		date: '2026/11/05',
-		amount: '12.000.000',
-		currency: 'IDR',
-		name: 'Mortgage',
-		term: 'Long term',
-		note: '',
-		...fields
-	});
+	oldLiability(db, alice, { date: '2026/11/05', amount: '12.000.000', name: 'Mortgage', term: 'Long term', ...fields });
 
 test(
 	'an income under salary lists as Salary with an empty expense type and owner',
@@ -249,21 +241,6 @@ test('a purchase opens for editing with its fields shaped for the Purchase form'
 	});
 });
 
-test('a liability opens for editing on the debt tab with its name and term', () => {
-	liability();
-	const [record] = listRecords(db, alice);
-
-	expect(editableRecord(db, alice, record.id)).toEqual({
-		id: record.id,
-		type: 'debt',
-		date: '2026/11/05',
-		amount: '12.000.000',
-		currency: 'IDR',
-		name: 'Mortgage',
-		term: 'Long term',
-		note: ''
-	});
-});
 
 test('choosing edit on an asset update opens the asset list', { meta: { scenario: 'S208' } }, () => {
 	buy(alice);

@@ -5,6 +5,7 @@ import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
 import { recordHolding } from './holdings-fixture';
 import { loadReport } from './report';
+import { saveDebt } from './debts';
 import { saveSettings } from './settings';
 
 let db: Db;
@@ -349,3 +350,20 @@ test('three reporting months without a sale leave out the memo line', { meta: { 
 
 	expect(labels).not.toContain(memo);
 });
+
+test(
+	'a debt over 36 months counts its remaining debt as long term, and one over 12 months as short term',
+	{ meta: { scenario: 'S236' } },
+	() => {
+		const debt = { category: 'Car installment', amount: '150.000.000', paymentType: 'Monthly', installment: '5.200.000' };
+		saveDebt(db, alice, { ...debt, tenor: '36', start: '2025/06/25', end: '2028/05/25' });
+		saveDebt(db, alice, { ...debt, tenor: '12', start: '2026/10/01', end: '2027/09/01', installment: '1.000.000' });
+
+		const report = loadReport(db, alice, '2026-11-18')!;
+		const value = (label: string) =>
+			report.sections.flatMap((section) => section.lines).find((row) => row.label === label)!.values.at(-1);
+
+		expect(report.months.at(-1)).toBe('2026/11');
+		expect([value('Long term'), value('Short term')]).toEqual([187200000 - 18 * 5200000, 12000000 - 2 * 1000000]);
+	}
+);

@@ -11,7 +11,8 @@
 	const records = $derived(data.records);
 	const days = $derived(Map.groupBy(records, day));
 
-	const dot = { income: 'bg-in', expense: 'bg-out', asset: 'bg-chart-5' };
+	const dot = { income: 'bg-in', expense: 'bg-out', asset: 'bg-chart-5', debt: 'bg-chart-4' };
+	const editable = (record: { cls?: string }) => record.cls !== 'Liability';
 </script>
 
 {#snippet remove(record: Record)}
@@ -82,9 +83,10 @@
 				<ul class="divide-y rounded-xl border bg-card">
 					{#each rows as record (record.id)}
 						<li class="flex items-center pr-1">
-							<a
-								href="/diary?edit={record.id}"
-								aria-label="Edit {label(record)} of {date}"
+							<svelte:element
+								this={editable(record) ? 'a' : 'div'}
+								href={editable(record) ? `/diary?edit=${record.id}` : undefined}
+								aria-label={editable(record) ? `Edit ${label(record)} of ${date}` : undefined}
 								class="flex min-w-0 flex-1 items-start gap-3 py-3 pl-3 text-foreground no-underline hover:no-underline"
 							>
 								<span class={['mt-1.5 size-2.5 shrink-0 rounded-full', dot[record.kind]]}></span>
@@ -98,7 +100,7 @@
 									<span class={['font-semibold tabular-nums', tone[record.kind]]}>{money(record.amount)}</span>
 									<span class="text-xs text-muted-foreground">{record.currency}</span>
 								</span>
-							</a>
+							</svelte:element>
 							{@render remove(record)}
 						</li>
 					{/each}
@@ -141,7 +143,7 @@
 							</Table.Cell>
 							<Table.Cell class="pr-2 text-right">
 								<span class="inline-flex gap-1">
-									<Button href="/diary?edit={record.id}" variant="ghost" size="sm"><PencilIcon />Edit</Button>
+									{#if editable(record)}<Button href="/diary?edit={record.id}" variant="ghost" size="sm"><PencilIcon />Edit</Button>{/if}
 									{@render remove(record)}
 								</span>
 							</Table.Cell>

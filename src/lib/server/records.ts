@@ -2,6 +2,7 @@ import { sale } from '#lib/category.ts';
 import { day, money, type Record } from '#lib/record.ts';
 import { editablePurchase, purchaseOf } from './assets';
 import type { Db } from './db';
+import { debtOf, editableDebt } from './debts';
 
 type Row = Omit<Record, 'id'> & { id: number };
 
@@ -18,20 +19,32 @@ export function listRecords(db: Db, userId: number): Record[] {
 			FROM diary_assets WHERE user_id = ?`
 		)
 		.all(userId) as Row[];
-	return [...flows, ...holdings]
+	const debts = db
+		.prepare(
+			`SELECT id, 'debt' AS kind, start AS date, amount, currency, '' AS note, category AS name, code, tenor,
+			payment_type AS paymentType, installment
+			FROM diary_debts WHERE user_id = ?`
+		)
+		.all(userId) as Row[];
+	return [...flows, ...holdings, ...debts]
 		.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
-		.map((row) => ({ ...row, id: `${row.kind === 'asset' ? 'a' : 'e'}${row.id}` }));
+		.map((row) => ({ ...row, id: `${prefix[row.kind]}${row.id}` }));
 }
 
+const prefix = { income: 'e', expense: 'e', asset: 'a', debt: 'd' };
+
+const tables: { [letter: string]: string } = { e: 'diary_entries', a: 'diary_assets', d: 'diary_debts' };
+
 export function recordKey(key: string) {
-	const match = /^([ea])(\d+)$/.exec(key);
+	const match = /^([ead])(\d+)$/.exec(key);
 	if (!match) return null;
-	return { table: match[1] === 'a' ? 'diary_assets' : 'diary_entries', id: Number(match[2]) };
+	return { table: tables[match[1]], id: Number(match[2]) };
 }
 
 export function editableRecord(db: Db, userId: number, key: string): { [field: string]: string } | null {
 	const record = listRecords(db, userId).find((row) => row.id === key);
 	if (!record) return null;
+	if (record.kind === 'debt') return editableDebt(debtOf(db, userId, recordKey(key)!.id)!);
 	const common = {
 		id: record.id,
 		type: record.kind,
@@ -41,9 +54,7 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 	};
 	if (record.kind === 'asset') {
 		const id = recordKey(key)!.id;
-		if (record.cls === 'Liability') {
-			return { ...common, type: 'debt', name: record.name!, term: record.term ?? '', note: record.note };
-		}
+		if (record.cls === 'Liability') return null;
 		const purchase = purchaseOf(db, userId, id);
 		return purchase ? editablePurchase(purchase) : { id: key, type: 'asset', view: 'list' };
 	}
@@ -73,5 +84,6 @@ export function wipeRecords(db: Db, userId: number) {
 	db.transaction(() => {
 		db.prepare('DELETE FROM diary_entries WHERE user_id = ?').run(userId);
 		db.prepare('DELETE FROM diary_assets WHERE user_id = ?').run(userId);
+		db.prepare('DELETE FROM diary_debts WHERE user_id = ?').run(userId);
 	})();
 }

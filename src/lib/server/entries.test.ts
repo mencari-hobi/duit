@@ -154,32 +154,6 @@ test(
 	}
 );
 
-test(
-	'adding the liability mortgage loan with a long term stores a liability without a source of fund',
-	{ meta: { scenario: 'S48' } },
-	() => {
-		addEntry(db, alice, {
-			type: 'debt',
-			date: '2026/11/03',
-			name: 'Mortgage loan',
-			amount: '300.000.000',
-			currency: 'IDR',
-			term: 'Long term',
-			note: ''
-		});
-
-		expect(assetRows()).toEqual([
-			expect.objectContaining({
-				name: 'Mortgage loan',
-				class: 'Liability',
-				value: 300000000,
-				term: 'Long term',
-				source: null
-			})
-		]);
-	}
-);
-
 test('adding an expense with a blank category stores it under other', () => {
 	addEntry(db, alice, expense({ category: ' ' }));
 

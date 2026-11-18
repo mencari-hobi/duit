@@ -3,6 +3,7 @@ import { capitalize, sale } from '#lib/category.ts';
 import type { Line, Report } from '#lib/report.ts';
 import { expenseTypes, latestHoldings, monthOf } from './dashboard';
 import type { Db } from './db';
+import { debtHoldings, todayIso } from './debts';
 import { readSettings } from './settings';
 
 type Flow = { kind: 'income' | 'expense'; date: string; amount: number; category: string; expenseType: string | null };
@@ -95,7 +96,7 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 	};
 }
 
-export function loadReport(db: Db, userId: number): Report | null {
+export function loadReport(db: Db, userId: number, today = todayIso()): Report | null {
 	const { currency, startDay } = readSettings(db, userId);
 	const flows = (
 		db
@@ -112,7 +113,9 @@ export function loadReport(db: Db, userId: number): Report | null {
 				FROM diary_assets WHERE user_id = ? AND currency = ? ORDER BY date, id`
 			)
 			.all(userId, currency) as Holding[]
-	).map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
+	)
+		.concat(debtHoldings(db, userId, currency, startDay, today))
+		.map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
 	const known = [...flows, ...updates].map((row) => row.month).sort();
 	if (!known.length) return null;
 	const span = [known[0]];

@@ -8,7 +8,7 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'name' | 'currency' | 'asset' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'currency' | 'asset' };
 
 type Added = { added: true };
 
@@ -24,16 +24,6 @@ function parseCommon(fields: EntryFields): Refusal | Common {
 	const currency = field(fields, 'currency');
 	if (!isCurrency(currency)) return { message: 'Pick a currency from the list.', field: 'currency' };
 	return { date, amount, currency, note: field(fields, 'note') };
-}
-
-function addLiability(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
-	const name = field(fields, 'name');
-	if (!name) return { message: 'Please enter a name for the liability.', field: 'name' };
-	db.prepare(
-		`INSERT INTO diary_assets (id, user_id, date, name, class, value, currency, term, note)
-		VALUES (?, ?, ?, ?, 'Liability', ?, ?, ?, ?)`
-	).run(id, userId, common.date, name, common.amount, common.currency, field(fields, 'term'), common.note);
-	return { added: true };
 }
 
 function addSale(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
@@ -76,9 +66,7 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 function insert(db: Db, userId: number, fields: EntryFields, id: number | null): Refusal | Added {
 	const common = parseCommon(fields);
 	if ('message' in common) return common;
-	return fields.type === 'debt'
-		? addLiability(db, userId, fields, common, id)
-		: addIncomeOrExpense(db, userId, fields, common, id);
+	return addIncomeOrExpense(db, userId, fields, common, id);
 }
 
 export function addEntry(db: Db, userId: number, fields: EntryFields): Refusal | Added {
@@ -97,11 +85,10 @@ export function saveEntry(db: Db, userId: number, fields: EntryFields): Refusal 
 	if (!old || !db.prepare(`SELECT 1 FROM ${old.table} WHERE id = ? AND user_id = ?`).get(old.id, userId)) {
 		return { missing: true };
 	}
-	const table = fields.type === 'debt' ? 'diary_assets' : 'diary_entries';
 	try {
 		return db.transaction(() => {
 			db.prepare(`DELETE FROM ${old.table} WHERE id = ?`).run(old.id);
-			const result = insert(db, userId, fields, table === old.table ? old.id : null);
+			const result = insert(db, userId, fields, old.table === 'diary_entries' ? old.id : null);
 			if ('message' in result) throw new Refused(result);
 			return result;
 		})();

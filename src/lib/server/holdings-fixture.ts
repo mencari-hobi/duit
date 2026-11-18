@@ -1,6 +1,7 @@
 import { savePurchase, saveUpdates } from './assets';
 import type { Db } from './db';
-import { addEntry } from './entries';
+import { isoDate } from '#lib/date.ts';
+import { parseAmount } from '#lib/amount.ts';
 
 type Holding = Record<string, string> & { date: string; name: string; amount: string };
 
@@ -9,7 +10,7 @@ const renamed: Record<string, string> = { Investments: 'Mutual Fund', Goldbar: '
 export function recordHolding(db: Db, userId: number, holding: Holding) {
 	const { date, name, amount, currency = 'IDR', cls = 'Cash', source = 'Salary', acquisition, term = '' } = holding;
 	if (cls === 'Liability') {
-		addEntry(db, userId, { type: 'debt', date, name, amount, currency, term, note: '' });
+		oldLiability(db, userId, { date, name, amount, currency, term });
 		return;
 	}
 	const known = db
@@ -32,4 +33,12 @@ export function recordHolding(db: Db, userId: number, holding: Holding) {
 			return result.saved;
 		})();
 	if (known || acquisition) saveUpdates(db, userId, { [`date-${code}`]: date, [`value-${code}`]: amount });
+}
+
+export function oldLiability(db: Db, userId: number, row: Record<string, string>) {
+	const { date, name, amount, currency = 'IDR', term = '' } = row;
+	db.prepare(
+		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, term, note)
+		VALUES (?, ?, ?, 'Liability', ?, ?, ?, '')`
+	).run(userId, isoDate(date), name, parseAmount(amount), currency, term);
 }

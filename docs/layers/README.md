@@ -84,3 +84,6 @@ Every layer of the product with its files, then under each feature code its chai
 
 ## F26
 - S48: screen, server, auth, db
+
+## F27
+- S230: screen, server, auth, db

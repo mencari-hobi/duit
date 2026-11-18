@@ -145,3 +145,21 @@ test(
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
+
+test(
+	'the financial diary debt payment with a debt fits a 360 px wide screen',
+	{ meta: { scenario: 'S238' } },
+	async () => {
+		const { cookie } = await registered();
+		await post(
+			'/diary',
+			{ type: 'debt', category: 'Non-collateral loan', amount: '20.000.000', tenor: '6', paymentType: 'Monthly', start: '2026/09/25', end: '2027/02/25', installment: '4.000.000' },
+			cookie
+		);
+
+		const page = await openPage('/diary?tab=debt&view=payments', cookie, phoneWidth);
+
+		expect(await page.getByLabel('DBT-0001 paid').count()).toBe(1);
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);
