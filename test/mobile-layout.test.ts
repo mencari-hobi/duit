@@ -108,3 +108,22 @@ test(
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
+
+test(
+	'the plan on view budget with an item of each kind fits a 360 px wide screen',
+	{ meta: { scenario: 'S188' } },
+	async () => {
+		const { cookie } = await registered();
+		const items: Record<string, string>[] = [
+			{ tab: 'income', amount: '18.000.000', currency: 'IDR', timeframe: 'monthly', category: 'Salary', note: '' },
+			{ tab: 'expense', amount: '2.500.000', currency: 'IDR', timeframe: 'monthly', category: 'Birthday/Anniversary/Holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' },
+			{ tab: 'saving', dream: 'A house with a garden by the sea', amount: '600.000.000', currency: 'IDR', months: '120' },
+			{ tab: 'debt', category: 'Non-collateral loan', amount: '4.000.000', currency: 'IDR', start: '2026/01/25', end: '2099/10/25' }
+		];
+		for (const item of items) await post('/plan?/save', item, cookie);
+
+		const page = await openPage('/plan?tab=budget', cookie, phoneWidth);
+
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);

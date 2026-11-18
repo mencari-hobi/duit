@@ -8,8 +8,9 @@
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
-	import { group, parseAmount, regroup, sizeOf } from '#lib/amount.ts';
-	import { capitalize, expenseDefaults, sale } from '#lib/category.ts';
+	import AmountField from '#lib/AmountField.svelte';
+	import { group, parseAmount, regroup } from '#lib/amount.ts';
+	import { capitalize, expenseDefaults, expenseTypes, owners, sale } from '#lib/category.ts';
 	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
@@ -28,8 +29,6 @@
 		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
 		expense: Object.keys(expenseDefaults)
 	};
-	const expenseTypes = ['Fixed - Essential', 'Non-fixed - Essential', 'Fixed - Non-essential', 'Non-fixed - Non-essential'];
-	const owners = ['Personal', 'Children', 'Spouse', 'Family', 'Extended Family', 'Friends', 'Other'];
 	const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other', 'Liability'];
 	const sources = ['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Debt'];
 	const terms = ['Short term', 'Long term'];
@@ -86,17 +85,7 @@
 		open = false;
 	};
 
-	const names = new Intl.DisplayNames('en', { type: 'currency' });
-	const currencies = Intl.supportedValuesOf('currency');
 	let currency = $state(sent?.currency ?? untrack(() => data.settings!.currency));
-	let currencyPicker = $state(false);
-	let currencyQuery = $state('');
-	const currencyTyped = $derived(currencyQuery.trim().toLowerCase());
-	const currencyShown = $derived(
-		currencyTyped
-			? currencies.filter((code) => `${code} ${names.of(code)}`.toLowerCase().includes(currencyTyped))
-			: currencies
-	);
 
 	let amount = $state(sent?.amount ?? '');
 
@@ -145,73 +134,14 @@
 		</fieldset>
 	</div>
 
-	<div class="flex flex-col gap-1.5">
-		<Label for="amount" class="text-muted-foreground">{gold ? 'Purchase value (total cost)' : type === 'asset' ? 'Current value' : 'Amount'}</Label>
-		<div
-			class={[
-				'flex items-baseline gap-2 border-b-2 pb-1 focus-within:border-ring',
-				form?.field === 'amount' ? 'border-destructive' : 'border-input'
-			]}
-		>
-			<span class={['self-center font-heading text-3xl', signColor]}>{sign}</span>
-			<input
-				id="amount"
-				name="amount"
-				inputmode="decimal"
-				autocomplete="off"
-				placeholder="0"
-				value={amount}
-				oninput={(event) => (amount = regroup(event.currentTarget))}
-				{...flagged('amount')}
-				class={[
-					'h-11 w-full min-w-0 bg-transparent font-heading font-semibold tabular-nums outline-none placeholder:text-muted-foreground/50',
-					sizeOf(amount)
-				]}
-			/>
-			<input type="hidden" name="currency" value={currency} />
-			<Popover.Root bind:open={currencyPicker}>
-				<Popover.Trigger>
-					{#snippet child({ props })}
-						<Button
-							{...props}
-							variant="outline"
-							role="combobox"
-							aria-label="Currency, {currency} · {names.of(currency)}"
-							aria-expanded={currencyPicker}
-							{...flagged('currency')}
-							class="h-9 shrink-0 gap-1 self-center px-2 text-sm font-semibold"
-						>
-							{currency}
-							<ChevronsUpDownIcon class="size-3.5 opacity-50" />
-						</Button>
-					{/snippet}
-				</Popover.Trigger>
-				<Popover.Content class="w-72 max-w-[calc(100vw-2rem)] p-0" align="end">
-					<Command.Root shouldFilter={false}>
-						<Command.Input placeholder="Search currency" bind:value={currencyQuery} class="text-base" />
-						<Command.List>
-							<Command.Empty>No currency found.</Command.Empty>
-							<Command.Group>
-								{#each currencyShown as code (code)}
-									<Command.Item
-										value={code}
-										onSelect={() => {
-											currency = code;
-											currencyQuery = '';
-											currencyPicker = false;
-										}}
-									>
-										<CheckIcon class={['size-4', code !== currency && 'text-transparent']} />
-										{code} · {names.of(code)}
-									</Command.Item>
-								{/each}
-							</Command.Group>
-						</Command.List>
-					</Command.Root>
-				</Popover.Content>
-			</Popover.Root>
-		</div>
-	</div>
+	<AmountField
+		label={gold ? 'Purchase value (total cost)' : type === 'asset' ? 'Current value' : 'Amount'}
+		{sign}
+		{signColor}
+		bind:amount
+		bind:currency
+		invalid={form?.field}
+	/>
 
 	<div class="grid gap-4 md:grid-cols-2">
 		<div class="flex flex-col gap-1.5">
