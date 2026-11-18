@@ -14,6 +14,8 @@
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import AssetList from '#lib/AssetList.svelte';
 	import AssetPurchase from '#lib/AssetPurchase.svelte';
+	import DebtForm from '#lib/DebtForm.svelte';
+	import DebtPayments from '#lib/DebtPayments.svelte';
 	import DateField from '#lib/DateField.svelte';
 	import type { PageProps } from './$types';
 
@@ -22,6 +24,7 @@
 		added?: boolean;
 		saved?: string;
 		updated?: number;
+		paid?: boolean;
 		error?: string;
 		field?: string;
 		values?: Record<string, string>;
@@ -36,7 +39,6 @@
 		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
 		expense: Object.keys(expenseDefaults)
 	};
-	const terms = ['Short term', 'Long term'];
 	const types: [Kind, string][] = [
 		['income', 'Income'],
 		['expense', 'Expense'],
@@ -49,10 +51,16 @@
 		asset: 'has-checked:bg-chart-5/15 has-checked:text-chart-5',
 		debt: 'has-checked:bg-chart-4/15 has-checked:text-chart-4'
 	};
-	const views = [
-		['purchase', 'Purchase'],
-		['list', 'Asset list & update']
-	];
+	const views = {
+		asset: [
+			['purchase', 'Purchase'],
+			['list', 'Asset list & update']
+		],
+		debt: [
+			['add', 'Additional debt'],
+			['payments', 'Debt payment']
+		]
+	};
 
 	const kept = $derived(form?.values ?? editing ?? {});
 	const day = slashDate(today(getLocalTimeZone()));
@@ -109,7 +117,7 @@
 <div class="flex w-full max-w-2xl flex-col gap-5">
 	{#if editing}
 		<div class="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 py-1 pr-1 pl-3 text-sm">
-			<span>Editing the {editing.type} of <span class="tabular-nums">{editing.date}</span></span>
+			<span>Editing the {editing.type} of <span class="tabular-nums">{editing.date ?? editing.start}</span></span>
 			<Button href="/records" variant="ghost" class="h-11 px-3 text-base text-primary">Cancel edit</Button>
 		</div>
 	{/if}
@@ -131,23 +139,44 @@
 		</fieldset>
 	</div>
 
-	{#if type === 'asset'}
-		{#if !editing}
-			<nav aria-label="Asset views" class="flex gap-4 border-b">
-				{#each views as [value, label] (value)}
-					<a
-						href="/diary?tab=asset&view={value}"
-						aria-current={data.view === value ? 'page' : undefined}
-						class={[
-							'-mb-px border-b-2 px-1 pb-2 text-base font-medium no-underline hover:no-underline',
-							data.view === value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
-						]}
-					>
-						{label}
-					</a>
-				{/each}
-			</nav>
+	{#if (type === 'asset' || type === 'debt') && !editing}
+		{@const current = type === 'asset' ? data.view : data.debtView}
+		<nav aria-label="{type === 'asset' ? 'Asset' : 'Debt'} views" class="flex gap-4 border-b">
+			{#each views[type] as [value, label] (value)}
+				<a
+					href="/diary?tab={type}&view={value}"
+					aria-current={current === value ? 'page' : undefined}
+					class={[
+						'-mb-px border-b-2 px-1 pb-2 text-base font-medium no-underline hover:no-underline',
+						current === value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+					]}
+				>
+					{label}
+				</a>
+			{/each}
+		</nav>
+	{/if}
+	{#if type === 'debt'}
+		{#if data.debtView === 'payments'}
+			<DebtPayments
+				table={data.debts}
+				months={data.months}
+				month={data.month}
+				currency={data.settings!.currency}
+				paid={form?.paid}
+			/>
+		{:else}
+			<DebtForm
+				{kept}
+				editing={!!editing}
+				currency={data.settings!.currency}
+				nextCode={data.nextDebtCode}
+				error={form?.error}
+				invalid={form?.field}
+				saved={form?.saved}
+			/>
 		{/if}
+	{:else if type === 'asset'}
 		{#if data.view === 'list' && !editing}
 			<AssetList
 				list={data.assets}
@@ -189,21 +218,7 @@
 	<div class="grid gap-4 md:grid-cols-2">
 		<DateField id="date" name="date" label="Date" bind:value={date} invalid={form?.field === 'date'} />
 
-		{#if type === 'debt'}
-			<div class="flex flex-col gap-1.5">
-				<Label for="name">Name</Label>
-				<Input
-					id="name"
-					name="name"
-					placeholder="e.g. Mortgage loan"
-					value={kept.name ?? ''}
-					{...flagged('name')}
-					class={field}
-				/>
-			</div>
-			{@render choice('term', 'term', 'Liability term', terms, kept.term ?? 'Long term')}
-		{:else}
-			<div class="flex flex-col gap-1.5">
+		<div class="flex flex-col gap-1.5">
 				<Label for="category">Category</Label>
 				<input type="hidden" name="category" value={category} />
 				<Popover.Root bind:open>
@@ -275,7 +290,6 @@
 				</div>
 				{@render choice('owner', 'owner', 'Expense owner', owners, kept.owner)}
 			{/if}
-		{/if}
 		<div class="flex flex-col gap-1.5 md:col-span-2">
 			<Label for="note">Note (optional)</Label>
 			<Input id="note" name="note" value={kept.note ?? ''} class={field} />

@@ -553,22 +553,3 @@ test(
 	}
 );
 
-test(
-	'adding the liability mortgage loan on the debt tab stores a liability without a source of fund',
-	{ meta: { scenario: 'S48' } },
-	async () => {
-		const { name, cookie } = await registered();
-		const page = await openPage('/diary', cookie);
-		await chooseType(page, 'Debt');
-		await page.getByLabel('Amount').pressSequentially('300000000');
-		await page.getByLabel('Name').fill('Mortgage loan');
-		await page.getByLabel('Liability term').selectOption('Long term');
-
-		await page.getByRole('button', { name: 'Add entry' }).click();
-
-		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
-		expect(rows('assets', name)).toEqual([
-			expect.objectContaining({ name: 'Mortgage loan', class: 'Liability', value: 300000000, term: 'Long term', source: null, code: null })
-		]);
-	}
-);

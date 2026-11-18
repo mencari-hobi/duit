@@ -23,6 +23,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S120: On a 360 px wide screen, `/snapshot` with three months of entries fits the screen width
   - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
   - Scenario S211: On a 360 px wide screen, `/diary` on the Asset list with an asset fits the screen width
+  - Scenario S238: On a 360 px wide screen, `/diary` on Debt payment with a debt fits the screen width
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -150,9 +151,38 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R82: An account without held assets reads "No assets yet. Save a purchase first."
   - Scenario S206: A new account's Asset list reads "No assets yet. Save a purchase first."
 
-### Feature F26: Liabilities
-- Rule R83: A liability added on the Debt tab stays with the account
-  - Scenario S48: Adding the liability "Mortgage loan" on the Debt tab, worth 300000000 with the term "Long term", stores a liability without a source of fund (happy path)
+### Feature F26: Additional debt
+- Rule R83: A debt saved on the Debt tab stays with the account under a new debt code
+  - Scenario S48: Saving a "Car installment" debt of 150.000.000 over 36 months, paid "Monthly" from 2025/06/25 to 2028/05/25 at 5.200.000, stores "DBT-0001" and shows "Saved DBT-0001 ✓" (happy path)
+  - Scenario S212: A second debt gets "DBT-0002", while another account's first debt gets "DBT-0001"
+  - Scenario S213: Saving a debt with a blank debt amount shows "Please enter the debt amount (numbers only)." and stores nothing
+  - Scenario S214: Saving a debt with the tenor "1.5" shows "Please enter the tenor as a whole number of months (1 or more)." and stores nothing
+  - Scenario S216: Saving a debt with a blank installment amount shows "Please enter the installment amount (numbers only)." and stores nothing
+  - Scenario S215: Saving a debt whose end payment is before its start payment shows "The end payment cannot be before the start payment." and stores nothing
+- Rule R85: The form totals the debt with its flat interest from the installment
+  - Scenario S217: The form filled as in S48 reads "IDR 187.200.000" under "Total debt & interest", "Installment × 36 payments", and "24.8%" under "Interest (flat)"
+  - Scenario S218: "Weekly" over 12 months reads "Installment × 48 payments", and "Daily" over 1 month reads "Installment × 30 payments"
+  - Scenario S219: The form of S48 with the end payment 2028/06/25 reads "The end payment differs from start + tenor (2028/05/25)." and the debt still saves
+- Rule R86: The Additional debt lists follow the spec
+  - Scenario S220: "Debt category" lists "Credit card", "Mortgage", "Car installment", "Non-collateral loan", and "Other loan", and "Payment type" lists "Daily", "Weekly", and "Monthly"
+- Rule R87: Editing a debt changes it under the same code
+  - Scenario S222: Choosing "Edit" on "DBT-0001" in Records opens Additional debt filled, with a "Save changes" button
+  - Scenario S237: Saving the installment 5.000.000 on that debt keeps "DBT-0001", stores 5000000, and adds no debt
+  - Scenario S223: Deleting "DBT-0001" in Records removes the debt and its Paid ticks
+
+### Feature F27: Debt payment
+- Rule R89: Debt payment lists each debt running in the reporting month
+  - Scenario S225: With the reporting start day 25, "DBT-0001" from S48 reads "Car installment", "187.200.000", "5.200.000", and "98.800.000" for "2026-11 (25 Oct – 24 Nov 2026) · current" (happy path)
+  - Scenario S226: A "Weekly" debt of 1.000.000 from 2026/10/25 reads a due amount of "5.000.000" for 2026-11 with the reporting start day 25
+  - Scenario S227: A debt whose last payment falls before the month, and a debt whose start payment falls after it, stay out of the table
+  - Scenario S228: The total row sums the debt & interest amounts, the due amounts, and the remaining debts, and reads "<n> unpaid" for the unticked rows
+  - Scenario S229: "Reporting month" lists each month from the earliest start payment to the current month, newest first, and choosing an earlier month shows that month's due amounts
+- Rule R90: "Save payments" stores the Paid tick of each debt for the chosen month, dated the day of the save
+  - Scenario S230: Ticking "DBT-0001" for 2026-11 and saving stores a payment of "DBT-0001" for 2026-11 paid today, shows "Saved ✓", and keeps the box ticked
+  - Scenario S231: Unticking "DBT-0001" and saving removes its payment for 2026-11
+  - Scenario S232: Ticking "DBT-0001" leaves its remaining debt at "98.800.000"
+- Rule R91: An account without debts reads "No debts yet. Save an additional debt first."
+  - Scenario S233: A new account's Debt payment reads "No debts yet. Save an additional debt first."
 
 ## Area A9: App › Financial Plan
 
@@ -222,6 +252,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S87: An expense dated 2026/11/02 and an asset dated 2026/11/05 list the asset first, each with its date as YYYY/MM/DD, its type, and its amount (happy path)
   - Scenario S88: An income under "salary" lists as "Salary", with "–" for the expense type and the owner
   - Scenario S89: An asset update lists its code, name, type, source, and cost, e.g. "AST-0001 · Antam bar (Gold) · funded by Bonus · cost 62.500.000"
+  - Scenario S221: A debt lists on its start payment date as "Debt" at its debt amount, with "DBT-0001 · Car installment · 36 × 5.200.000 monthly"
   - Scenario S90: An amount of 1250000 in "USD" lists as "1.250.000" beside "USD"
   - Scenario S91: The entries of another account stay out of the list
   - Scenario S92: The Records page reads "Nothing here yet." for an account without entries
@@ -234,13 +265,15 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S97: "Cancel edit" opens `/records` and leaves the entry unchanged
   - Scenario S208: Choosing "Edit" on an asset update opens the Asset list of the Financial Diary
   - Scenario S98: Saving changes to an entry of another account leaves that entry unchanged
+- Rule R88: A liability saved before the Debt tab lists in Records with "Delete" and without "Edit"
+  - Scenario S224: An old liability "Mortgage loan" lists with a "Delete" button and no "Edit" button
 
 ### Feature F18: Record deletion
 - Rule R45: The delete action on a row removes that entry
   - Scenario S99: Deleting an expense removes it from the list and from storage (happy path)
   - Scenario S100: Deleting an entry of another account leaves that entry stored
 - Rule R46: "Delete all data" removes every entry of the account after the user confirms "Delete ALL records? This cannot be undone."
-  - Scenario S101: Confirming "Delete all data" removes every income, expense, and asset of the account, and the list reads "Nothing here yet."
+  - Scenario S101: Confirming "Delete all data" removes every income, expense, asset, and debt of the account, and the list reads "Nothing here yet."
   - Scenario S102: Cancelling the confirmation keeps every entry
   - Scenario S103: Deleting all data leaves the entries of another account stored
 
@@ -264,6 +297,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S207: "Term Deposit", "Foreign Exchanges", and "Mutual Fund" assets of 1.000.000 each read "Liquid assets" 3,00
   - Scenario S112: An asset worth 12.000.000 with an acquisition value of 10.000.000 reads "Acquisition value" 10,00, "Capital gain (market − acquisition)" 2,00, and "Capital gain % of acquisition value" 20.0%
   - Scenario S113: Liabilities of 1.000.000 "Short term" and 2.000.000 "Long term" against assets of 8.000.000 read "Liabilities" 3,00, split by term, and "Net Worth (assets − liabilities)" 5,00
+  - Scenario S236: A debt over 36 months adds its remaining debt to "Long term", and a debt over 12 months or less adds it to "Short term"
 - Rule R50: The ratios section shows nine ratios of the month
   - Scenario S114: Income of 10.000.000, fixed expenses of 3.000.000, saving of 2.000.000, a "Cash" asset of 6.000.000, a "Property" asset of 2.000.000, and a liability of 2.000.000 read saving rate 20.0%, fixed expense ÷ income 30.0%, debt ÷ total assets 25.0%, liquidity ratio 75.0%, liquid assets ÷ net worth 100.0%, non-cash assets ÷ net worth 33.3%, and net worth ÷ total assets 75.0%
   - Scenario S115: Expenses of 3.000.000 under "mortgage" and 1.000.000 under "car installment" against income of 10.000.000 read debt service ratio 40.0% and non-mortgage service ratio 10.0%
@@ -313,8 +347,9 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S69: A month without income reads "Savings rate –"
 - Rule R57: The dashboard's income leaves out asset sales
   - Scenario S131: A salary of 10.000.000 and a sale of 150.000.000 in 2026/11 read "Income" 10.000.000 under "Cash flow · 2026/11" and on the income vs expense chart
-- Rule R31: Net worth sums each asset's latest value, minus each liability's latest value, up to the month
+- Rule R31: Net worth sums each asset's latest value, minus each old liability's latest value and each debt's remaining debt, up to the month
   - Scenario S70: With "Savings account" updated from 10.000.000 to 12.000.000, and "Mortgage loan" at 3.000.000, the "Net worth" card reads 9.000.000
+  - Scenario S234: With the reporting start day 25, an asset of 120.000.000 and "DBT-0001" from S48 read 21.200.000 on the "Net worth" card for 2026/11
 - Rule R32: Own-funded assets leave out the assets funded by "Debt"
   - Scenario S71: With a "Cash" asset of 10.000.000 funded by "Salary" and a car of 5.000.000 funded by "Debt", the "Own-funded assets" card reads 10.000.000 and "67% of assets · debt-funded 5.000.000"
   - Scenario S72: Own-funded assets growing from 10.000.000 in 2026/10 to 12.500.000 in 2026/11 read 2.500.000 on the "Saved into assets · 2026/11" card
@@ -338,6 +373,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S136: A "Cash" asset of 6.000.000 and a "Gold" asset of 2.000.000 in 2026/11 stack as 75% and 25%
 - Rule R40: The assets and liabilities table lists each asset with its latest value and its change from the update before
   - Scenario S82: "Savings account" updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000
+  - Scenario S235: "DBT-0001" from S48 reads "DBT-0001 · Car installment" at 98.800.000 for 2026/11, with a change of −5.200.000 from 2026/10
 
 ### Feature F15: Dashboard range
 - Rule R41: From and To narrow the dashboard to the reporting months they cover

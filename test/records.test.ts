@@ -3,7 +3,7 @@ import { expect, inject, test } from 'vitest';
 import { get, post, registered } from './app';
 import { openPage } from './browser';
 
-function rows(table: 'entries' | 'assets', name: string) {
+function rows(table: 'entries' | 'assets' | 'debts', name: string) {
 	const db = new Database(inject('databasePath'), { readonly: true });
 	const found = db
 		.prepare(`SELECT * FROM diary_${table} WHERE user_id = (SELECT id FROM users WHERE name = ?)`)
@@ -142,10 +142,11 @@ test(
 );
 
 test(
-	'confirming delete all data removes every entry and the list reads "Nothing here yet."',
+	'confirming delete all data removes every entry and debt, and the list reads "Nothing here yet."',
 	{ meta: { scenario: 'S101' } },
 	async () => {
 		const { name, cookie } = await withEntries();
+		await post('/diary', { type: 'debt', category: 'Mortgage', amount: '900.000.000', tenor: '180', paymentType: 'Monthly', start: '2025/06/25', end: '2040/05/25', installment: '6.000.000' }, cookie);
 		const page = await openPage('/records', cookie);
 
 		await page.getByRole('button', { name: 'Delete all data' }).click();
@@ -153,7 +154,7 @@ test(
 		await page.getByRole('button', { name: 'Delete all', exact: true }).click();
 
 		await expect.poll(() => page.getByText('Nothing here yet.').isVisible()).toBe(true);
-		expect([...rows('entries', name), ...rows('assets', name)]).toEqual([]);
+		expect([...rows('entries', name), ...rows('assets', name), ...rows('debts', name)]).toEqual([]);
 	}
 );
 

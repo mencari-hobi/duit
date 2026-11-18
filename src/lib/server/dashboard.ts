@@ -2,6 +2,7 @@ import { typeNames } from '#lib/asset.ts';
 import { sale } from '#lib/category.ts';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
+import { debtHoldings, todayIso } from './debts';
 import { readSettings } from './settings';
 
 type Flow = {
@@ -141,7 +142,7 @@ function assetTable(updates: Holding[]) {
 		.sort((a, b) => b.value - a.value);
 }
 
-export function loadDashboard(db: Db, userId: number, from: string, to: string) {
+export function loadDashboard(db: Db, userId: number, from: string, to: string, today = todayIso()) {
 	const { currency, startDay } = readSettings(db, userId);
 	const allFlows = db
 		.prepare(
@@ -160,7 +161,7 @@ export function loadDashboard(db: Db, userId: number, from: string, to: string) 
 			.filter((row) => row.currency === currency)
 			.map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
 	const flows = inCurrency(allFlows);
-	const updates = inCurrency(allHoldings);
+	const updates = inCurrency([...allHoldings, ...debtHoldings(db, userId, currency, startDay, today)]);
 	const known = [...new Set([...flows, ...updates].map((row) => row.month))].sort();
 	const fromDate = isoDate(from);
 	const toDate = isoDate(to);

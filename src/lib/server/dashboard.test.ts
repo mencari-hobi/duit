@@ -4,6 +4,7 @@ import { loadDashboard } from './dashboard';
 import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
 import { recordHolding } from './holdings-fixture';
+import { saveDebt } from './debts';
 import { saveSettings } from './settings';
 
 let db: Db;
@@ -313,3 +314,49 @@ test(
 		expect(board().months.at(-1)).toMatchObject({ month: '2026/11', income: 10000000 });
 	}
 );
+
+const carDebt = {
+	category: 'Car installment',
+	amount: '150.000.000',
+	tenor: '36',
+	paymentType: 'Monthly',
+	start: '2025/06/25',
+	end: '2028/05/25',
+	installment: '5.200.000'
+};
+
+test(
+	'an asset of 120.000.000 and DBT-0001 read a net worth of 21.200.000 for 2026/11',
+	{ meta: { scenario: 'S234' } },
+	() => {
+		saveSettings(db, alice, { currency: 'IDR', startDay: '25' });
+		asset('2026/11/01', 'Savings account', '120.000.000');
+		saveDebt(db, alice, carDebt);
+
+		const dashboard = loadDashboard(db, alice, '', '', '2026-11-18');
+
+		expect(dashboard.cards).toMatchObject({ month: '2026/11', netWorth: 21200000 });
+	}
+);
+
+test(
+	'DBT-0001 reads its remaining debt for 2026/11 with the drop from 2026/10',
+	{ meta: { scenario: 'S235' } },
+	() => {
+		saveSettings(db, alice, { currency: 'IDR', startDay: '25' });
+		saveDebt(db, alice, carDebt);
+
+		const { table } = loadDashboard(db, alice, '', '', '2026-11-18');
+
+		expect(table).toEqual([
+			expect.objectContaining({ code: 'DBT-0001', name: 'Car installment', cls: 'Liability', value: 98800000, change: -5200000 })
+		]);
+	}
+);
+
+test('a debt starting after the current month leaves the dashboard months unchanged', () => {
+	income('2026/11/05', '10.000.000');
+	saveDebt(db, alice, { ...carDebt, start: '2027/01/25', end: '2029/12/25' });
+
+	expect(loadDashboard(db, alice, '', '', '2026-11-18').months.map((month) => month.month)).toEqual(['2026/11']);
+});

@@ -71,3 +71,12 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I17: Liquid assets cover cash, term deposits, foreign exchanges, and mutual funds
 - Why: The user counts money reachable within days as liquid
 - Serves: S207
+
+## Intent I18: A debt counts its remaining debt as a liability, falling as each installment falls due
+- Why: The Spec sets the remaining debt as the debt & interest amount less every installment due so far, and the user chose to count it in net worth
+- Not: a remaining debt that falls only when a payment is ticked
+- Serves: F26, F27, R31, R88, S221, S235, S236
+
+## Intent I19: A Paid tick stores the day of the save as its paid date
+- Why: The Spec needs a paid date so a later Spending Report can place each payment in a period, and the user kept the mockup's table without a date column
+- Serves: R90

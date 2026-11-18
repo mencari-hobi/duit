@@ -84,6 +84,26 @@ export function openDatabase(path: string): Db {
 			start TEXT NOT NULL,
 			end TEXT NOT NULL
 		);
+		CREATE TABLE IF NOT EXISTS diary_debts (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			code TEXT NOT NULL,
+			category TEXT NOT NULL,
+			amount REAL NOT NULL,
+			tenor INTEGER NOT NULL CHECK (tenor >= 1),
+			payment_type TEXT NOT NULL CHECK (payment_type IN ('Daily', 'Weekly', 'Monthly')),
+			start TEXT NOT NULL,
+			end TEXT NOT NULL,
+			installment REAL NOT NULL,
+			currency TEXT NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS diary_debt_payments (
+			id INTEGER PRIMARY KEY,
+			debt_id INTEGER NOT NULL REFERENCES diary_debts(id) ON DELETE CASCADE,
+			month TEXT NOT NULL,
+			paid_date TEXT NOT NULL,
+			UNIQUE (debt_id, month)
+		);
 	`);
 	const columns = db.prepare('PRAGMA table_info(diary_assets)').all() as { name: string }[];
 	const added = {
