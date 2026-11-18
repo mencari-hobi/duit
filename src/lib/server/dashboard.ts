@@ -1,3 +1,4 @@
+import { typeNames } from '#lib/asset.ts';
 import { sale } from '#lib/category.ts';
 import { isoDate } from '#lib/date.ts';
 import type { Db } from './db';
@@ -21,9 +22,12 @@ type Holding = {
 	currency: string;
 	source: string | null;
 	term: string | null;
+	code: string | null;
 };
 
-const classes = ['Cash', 'Investments', 'Goldbar', 'Property', 'Other'];
+const classes = typeNames;
+
+const holdingKey = (row: { name: string; code?: string | null }) => row.code ?? row.name;
 export const expenseTypes = [
 	'Fixed - Essential',
 	'Non-fixed - Essential',
@@ -44,9 +48,9 @@ const change = (now: number, before: number) => (before ? ((now - before) * 100)
 
 type Monthly<T> = T & { month: string };
 
-export function latestHoldings<T extends { name: string; month: string }>(updates: T[], month: string) {
+export function latestHoldings<T extends { name: string; code?: string | null; month: string }>(updates: T[], month: string) {
 	const latest = new Map<string, T>();
-	for (const row of updates.filter((row) => row.month <= month)) latest.set(row.name, row);
+	for (const row of updates.filter((row) => row.month <= month)) latest.set(holdingKey(row), row);
 	return [...latest.values()];
 }
 
@@ -119,13 +123,14 @@ function totals(spent: Flow[], key: 'owner' | 'category') {
 }
 
 function assetTable(updates: Holding[]) {
-	return [...new Set(updates.map((row) => row.name))]
-		.map((name) => {
-			const history = updates.filter((row) => row.name === name);
+	return [...new Set(updates.map(holdingKey))]
+		.map((key) => {
+			const history = updates.filter((row) => holdingKey(row) === key);
 			const now = history.at(-1)!;
 			const was = history.at(-2);
 			return {
-				name,
+				name: now.name,
+				code: now.code,
 				cls: now.class,
 				source: now.source ?? now.term,
 				value: now.value,
@@ -146,7 +151,7 @@ export function loadDashboard(db: Db, userId: number, from: string, to: string) 
 		.all(userId) as Flow[];
 	const allHoldings = db
 		.prepare(
-			'SELECT date, name, class, value, currency, source, term FROM diary_assets WHERE user_id = ? ORDER BY date, id'
+			'SELECT date, name, class, value, currency, source, term, code FROM diary_assets WHERE user_id = ? ORDER BY date, id'
 		)
 		.all(userId) as Holding[];
 	const leftOut = [...allFlows, ...allHoldings].filter((row) => row.currency !== currency).length;

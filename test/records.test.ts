@@ -28,10 +28,11 @@ const asset = {
 	date: '2026/11/05',
 	amount: '12.000.000',
 	currency: 'IDR',
-	name: 'Savings account',
 	cls: 'Cash',
 	source: 'Salary',
-	note: ''
+	unit: '12.000.000',
+	unitCurrency: 'IDR',
+	note: 'Savings account'
 };
 
 async function withEntries() {

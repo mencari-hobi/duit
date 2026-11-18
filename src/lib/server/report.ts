@@ -1,3 +1,4 @@
+import { liquidTypes, typeNames } from '#lib/asset.ts';
 import { capitalize, sale } from '#lib/category.ts';
 import type { Line, Report } from '#lib/report.ts';
 import { expenseTypes, latestHoldings, monthOf } from './dashboard';
@@ -6,14 +7,14 @@ import { readSettings } from './settings';
 
 type Flow = { kind: 'income' | 'expense'; date: string; amount: number; category: string; expenseType: string | null };
 
-type Holding = { date: string; name: string; class: string; value: number; source: string | null; term: string | null; acquisition: number | null };
+type Holding = { date: string; name: string; class: string; value: number; source: string | null; term: string | null; acquisition: number | null; code: string | null };
 
 type Bag = { [key: string]: number };
 
 type Monthly<T> = T & { month: string };
 
-const nonLiquid = ['Goldbar', 'Investments', 'Other', 'Property'];
-const classes = ['Cash', ...nonLiquid];
+const nonLiquid = typeNames.filter((name) => !liquidTypes.includes(name));
+const classes = typeNames;
 const installmentCategories = ['mortgage', 'car installment', 'debt payment', 'other installment'];
 
 const add = (bag: Bag, key: string, amount: number) => (bag[key] = (bag[key] ?? 0) + amount);
@@ -86,7 +87,7 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 		incomeTotal,
 		expenseTotal,
 		savingTotal: total(saving),
-		liquid: assets.Cash ?? 0,
+		liquid: liquidTypes.reduce((sum, name) => sum + (assets[name] ?? 0), 0),
 		assetTotal,
 		costTotal: total(cost),
 		debtTotal,
@@ -107,7 +108,7 @@ export function loadReport(db: Db, userId: number): Report | null {
 	const updates = (
 		db
 			.prepare(
-				`SELECT date, name, class, value, source, term, acquisition
+				`SELECT date, name, class, value, source, term, acquisition, code
 				FROM diary_assets WHERE user_id = ? AND currency = ? ORDER BY date, id`
 			)
 			.all(userId, currency) as Holding[]
@@ -152,7 +153,7 @@ export function loadReport(db: Db, userId: number): Report | null {
 	];
 	const worth = [
 		sum('Liquid assets', (c) => c.liquid),
-		...['Cash'].filter(inAnyColumn((c) => c.assets)).map((name) => line(name, 1, (c) => c.assets[name] ?? 0)),
+		...liquidTypes.filter(inAnyColumn((c) => c.assets)).map((name) => line(name, 1, (c) => c.assets[name] ?? 0)),
 		sum('Non-liquid assets', (c) => c.assetTotal - c.liquid),
 		...nonLiquid.filter(inAnyColumn((c) => c.assets)).map((name) => line(name, 1, (c) => c.assets[name] ?? 0)),
 		grand('Total Assets (market value)', (c) => c.assetTotal),

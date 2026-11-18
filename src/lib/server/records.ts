@@ -1,5 +1,6 @@
 import { sale } from '#lib/category.ts';
 import { day, money, type Record } from '#lib/record.ts';
+import { editablePurchase, purchaseOf } from './assets';
 import type { Db } from './db';
 
 type Row = Omit<Record, 'id'> & { id: number };
@@ -13,7 +14,7 @@ export function listRecords(db: Db, userId: number): Record[] {
 		.all(userId) as Row[];
 	const holdings = db
 		.prepare(
-			`SELECT id, 'asset' AS kind, date, value AS amount, currency, note, name, class AS cls, source, term, acquisition, weight, price
+			`SELECT id, 'asset' AS kind, date, value AS amount, currency, note, name, class AS cls, source, term, acquisition, code
 			FROM diary_assets WHERE user_id = ?`
 		)
 		.all(userId) as Row[];
@@ -39,17 +40,12 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 		currency: record.currency
 	};
 	if (record.kind === 'asset') {
-		const gold = record.weight != null && record.price != null;
-		return {
-			...common,
-			...(gold ? { amount: money(record.acquisition!), weight: money(record.weight!), price: money(record.price!) } : {}),
-			name: record.name!,
-			cls: record.cls!,
-			...(record.source ? { source: record.source } : {}),
-			...(record.term ? { term: record.term } : {}),
-			acquisition: gold || record.acquisition == null ? '' : money(record.acquisition),
-			note: record.note
-		};
+		const id = recordKey(key)!.id;
+		if (record.cls === 'Liability') {
+			return { ...common, type: 'debt', name: record.name!, term: record.term ?? '', note: record.note };
+		}
+		const purchase = purchaseOf(db, userId, id);
+		return purchase ? editablePurchase(purchase) : { id: key, type: 'asset', view: 'list' };
 	}
 	return {
 		...common,
@@ -61,13 +57,16 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 }
 
 function soldAsset(db: Db, saleId: number) {
-	const row = db.prepare('SELECT name FROM diary_assets WHERE sale_id = ?').get(saleId) as { name: string } | undefined;
-	return row?.name ?? '';
+	const row = db.prepare('SELECT code FROM diary_assets WHERE sale_id = ?').get(saleId) as { code: string } | undefined;
+	return row?.code ?? '';
 }
 
 export function deleteRecord(db: Db, userId: number, key: string) {
 	const record = recordKey(key);
-	if (record) db.prepare(`DELETE FROM ${record.table} WHERE id = ? AND user_id = ?`).run(record.id, userId);
+	if (!record) return;
+	const purchase = record.table === 'diary_assets' ? purchaseOf(db, userId, record.id) : null;
+	if (purchase) db.prepare('DELETE FROM diary_assets WHERE user_id = ? AND code = ?').run(userId, purchase.code);
+	else db.prepare(`DELETE FROM ${record.table} WHERE id = ? AND user_id = ?`).run(record.id, userId);
 }
 
 export function wipeRecords(db: Db, userId: number) {

@@ -105,3 +105,68 @@ test(
 		expect(names).not.toContain('assets');
 	}
 );
+
+const withOldAssets = (rows: [string, string, string][]) => {
+	const path = join(dir, `old-assets-${rows.length}.db`);
+	mkdirSync(dir, { recursive: true });
+	const old = new Database(path);
+	old.exec(`
+		CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, password_hash TEXT NOT NULL);
+		CREATE TABLE diary_assets (
+			id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, date TEXT NOT NULL, name TEXT NOT NULL,
+			class TEXT NOT NULL, value REAL NOT NULL, currency TEXT NOT NULL, source TEXT, term TEXT,
+			acquisition REAL, note TEXT NOT NULL
+		);
+		INSERT INTO users (id, name, password_hash) VALUES (1, 'alice', 'x');
+	`);
+	const insert = old.prepare(
+		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, acquisition, note) VALUES (1, ?, ?, ?, 1, 'IDR', 1, '')`
+	);
+	for (const [date, name, cls] of rows) insert.run(date, name, cls);
+	old.close();
+	return openDatabase(path);
+};
+
+test(
+	'opening a database with investments, goldbar, and property assets moves them to the spec types',
+	{ meta: { scenario: 'S209' } },
+	() => {
+		const db = withOldAssets([
+			['2026-10-01', 'Fund', 'Investments'],
+			['2026-10-02', 'Antam', 'Goldbar'],
+			['2026-10-03', 'House', 'Property']
+		]);
+
+		const classes = db.prepare('SELECT name, class FROM diary_assets ORDER BY id').all();
+		db.close();
+
+		expect(classes).toEqual([
+			{ name: 'Fund', class: 'Mutual Fund' },
+			{ name: 'Antam', class: 'Gold' },
+			{ name: 'House', class: 'Property & Land' }
+		]);
+	}
+);
+
+test(
+	'opening a database with savings account and car codes them in order of their first date, each update sharing its code',
+	{ meta: { scenario: 'S210' } },
+	() => {
+		const db = withOldAssets([
+			['2026-11-01', 'Car', 'Other'],
+			['2026-10-01', 'Savings account', 'Cash'],
+			['2026-11-05', 'Savings account', 'Cash'],
+			['2026-11-06', 'Mortgage loan', 'Liability']
+		]);
+
+		const codes = db.prepare('SELECT name, code FROM diary_assets ORDER BY id').all();
+		db.close();
+
+		expect(codes).toEqual([
+			{ name: 'Car', code: 'AST-0002' },
+			{ name: 'Savings account', code: 'AST-0001' },
+			{ name: 'Savings account', code: 'AST-0001' },
+			{ name: 'Mortgage loan', code: null }
+		]);
+	}
+);
