@@ -9,11 +9,10 @@
 	import { Calendar } from '#lib/components/ui/calendar/index.js';
 	import CalendarIcon from '@lucide/svelte/icons/calendar';
 	import InfoIcon from '@lucide/svelte/icons/info';
-	import { group } from '#lib/amount.ts';
 	import { capitalize } from '#lib/category.ts';
 	import { groupDate, isoDate, slashDate } from '#lib/date.ts';
 	import { parseDate } from '@internationalized/date';
-	import type { Series } from '#lib/chart.ts';
+	import { money, type Series } from '#lib/chart.ts';
 	import Months from '#lib/Months.svelte';
 	import RankBars from '#lib/RankBars.svelte';
 	import type { PageProps } from './$types';
@@ -21,7 +20,6 @@
 	let { data }: PageProps = $props();
 	const board = $derived(data.dashboard);
 
-	const money = (n: number) => (n < 0 ? '−' : '') + group(String(Math.abs(Math.round(n))));
 	const signed = (n: number) => (n > 0 ? '+' : '') + money(n);
 
 	const classes: [string, string][] = [

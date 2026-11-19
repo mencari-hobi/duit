@@ -368,3 +368,81 @@ test('twelve months in a half-width upright chart label every other month, newes
 	expect(text).toContain('2026/12');
 	expect(text).not.toContain('2026/11');
 });
+
+async function hoverMonth(page: Page, chart: string, index: number) {
+	await page.locator(`[data-chart="${chart}-upright"] rect[role="presentation"]`).nth(index).hover();
+}
+
+const tooltip = (page: Page) => page.getByRole('tooltip');
+
+test(
+	'hovering 2026/11 on net worth growth with equity of 1.550.400.000 shows the month, the equity, and the net worth',
+	{ meta: { scenario: 'S285' } },
+	async () => {
+		const { cookie } = await registered();
+		await addAsset(cookie, '2026/11/01', 'Savings account', '1.550.400.000');
+		const page = await openPage('/', cookie);
+
+		await hoverMonth(page, 'worth', 0);
+
+		const text = await tooltip(page).innerText();
+		expect(text).toContain('2026/11');
+		expect(text).toMatch(/Equity\s+1\.550\.400\.000/);
+		expect(text).toMatch(/Net worth\s+1\.550\.400\.000/);
+	}
+);
+
+test(
+	'hovering 2026/11 on asset movement by type with cash of 6.000.000 at 75% shows "Cash 6.000.000 · 75%"',
+	{ meta: { scenario: 'S286' } },
+	async () => {
+		const page = await openPage('/', await cashAndLand());
+
+		await hoverMonth(page, 'classes', 0);
+
+		expect(await tooltip(page).innerText()).toMatch(/Cash\s+6\.000\.000 · 75%/);
+	}
+);
+
+test('a series worth 0 in the hovered month stays out of the tooltip', { meta: { scenario: 'S287' } }, async () => {
+	const page = await openPage('/', await cashAndLand());
+
+	await hoverMonth(page, 'classes', 0);
+
+	const text = await tooltip(page).innerText();
+	expect(text).toContain('Property & Land');
+	expect(text).not.toContain('Gold');
+});
+
+test('hovering a month where every series is 0 shows no tooltip', { meta: { scenario: 'S288' } }, async () => {
+	const { cookie } = await registered();
+	await addIncome(cookie, '2026/10/05', '9.000.000');
+	await addAsset(cookie, '2026/11/01', 'Savings account', '6.000.000');
+	const page = await openPage('/', cookie);
+
+	await hoverMonth(page, 'worth', 1);
+	await expect.poll(() => tooltip(page).count()).toBe(1);
+	await hoverMonth(page, 'worth', 0);
+
+	await expect.poll(() => tooltip(page).count()).toBe(0);
+});
+
+test('a net worth of −3.000.000 reads "Net worth −3.000.000" in the tooltip', { meta: { scenario: 'S289' } }, async () => {
+	const { cookie } = await registered();
+	await addAsset(cookie, '2026/11/01', 'Car loan', '3.000.000', { cls: 'Liability' });
+	const page = await openPage('/', cookie);
+
+	await hoverMonth(page, 'worth', 0);
+
+	expect(await tooltip(page).innerText()).toMatch(/Net worth\s+−3\.000\.000/);
+});
+
+test('moving the pointer off the month hides the tooltip', { meta: { scenario: 'S290' } }, async () => {
+	const page = await openPage('/', await cashAndLand());
+	await hoverMonth(page, 'classes', 0);
+	await tooltip(page).waitFor();
+
+	await page.mouse.move(0, 0);
+
+	await expect.poll(() => tooltip(page).count()).toBe(0);
+});

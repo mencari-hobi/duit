@@ -13,6 +13,7 @@ export type MonthChart = { id: string; rows: MonthRow[]; series: Series[]; layou
 
 export const mio = (value: number) => value / 1e6;
 export const tickLabel = (value: number) => group(String(Math.round(value)));
+export const money = (n: number) => (n < 0 ? '−' : '') + group(String(Math.abs(Math.round(n))));
 export const percent = (share: number | null | undefined) => (share == null ? '' : `${Math.round(share)}%`);
 
 export const chartData = (rows: MonthRow[], series: Series[]) =>
