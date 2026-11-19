@@ -88,7 +88,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S57: Adding the amount "1.250.000" stores 1250000
   - Scenario S58: Adding the amount "12,5" stores 12.5
 - Rule R22: The category list follows the entry type
-  - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", "Other", and "Sales of Asset"
+  - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", and "Other"
+  - Scenario S273: For an account with a stored sale, the income category list lacks "Sales of Asset"
   - Scenario S40: With "Expense" chosen, a new account's category list shows the spec's 17 expense categories, from "Grocery" to "Birthday/Anniversary/Holiday", and lacks "Mortgage", "Car Installment", "Debt Payment", and "Other Installment"
 - Rule R61: An expense category fills in its default expense type from the Settings sheet, and the user can change it
   - Scenario S142: The Expense form opens with "Grocery" and "Non-fixed - Essential" chosen
@@ -105,24 +106,26 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S44: Adding an expense under "Self Care/Entertainment" stores the category "self care/entertainment"
   - Scenario S45: An expense stored under "gasoline & tolls" shows as "Gasoline & Tolls" in the expense category list
   - Scenario S46: Typing "GROCERY" as a new expense category picks the listed "Grocery", and the list shows one "Grocery"
-  - Scenario S122: An income stored under "sales of asset" shows as "Sales of Asset" in the income category list
+  - Scenario S122: A sale stored under "sales of asset" shows as "Sales of Asset"
 - Rule R27: An entry stores the currency picked beside its amount, and the picker starts at the default currency
   - Scenario S52: For an account whose default currency is "USD", the currency beside the amount reads "USD" when the Financial Diary page opens
   - Scenario S53: Picking "SGD" beside the amount, then adding an expense, stores "SGD" as the expense's currency
   - Scenario S54: Adding an entry with the currency "ABC" shows "Pick a currency from the list." and stores no entry
 
 ### Feature F20: Asset sales
-- Rule R54: Adding a "Sales of Asset" income stores the proceeds and sets the sold asset to 0 from the sale date
-  - Scenario S123: Selling "Car" for 150.000.000 on 2026/11/03 stores an income of 150000000 under "sales of asset", and an update of "Car" dated 2026/11/03 worth 0 with an acquisition value of 0 (happy path)
+- Rule R54: Saving the "Sell" form of an asset stores the proceeds and sets the asset to 0 from the sale date
+  - Scenario S123: Selling "AST-0001 · Car" for 150.000.000 on 2026/11/03 stores an income of 150000000 under "sales of asset", an update of "AST-0001" dated 2026/11/03 worth 0 with an acquisition value of 0, and shows "Sold AST-0001 ✓" (happy path)
   - Scenario S124: A sale with a blank note stores the note "Sale of Car"
-- Rule R55: With "Sales of Asset" chosen, the "Asset sold" list offers the assets still held
-  - Scenario S125: The "Asset sold" list shows each asset whose latest value is above 0, and no liability
-  - Scenario S126: For an account without a held asset, the "Asset sold" list reads "No assets recorded yet"
-  - Scenario S127: Adding a sale without a chosen asset shows "Choose the asset that was sold." and stores nothing
+  - Scenario S274: A sale with a blank amount shows "Please enter an amount (numbers only)." and stores nothing
+- Rule R55: Each row of the Asset list offers "Sell", and its form names the asset
+  - Scenario S275: Choosing "Sell" on "AST-0001" opens a form headed "Sell AST-0001 · Car", with today's date and the default currency
+  - Scenario S276: A sale posted for an asset already sold, or for another account's asset, stores nothing
 - Rule R56: Editing or deleting a sale moves the sold asset's 0 update with it
-  - Scenario S128: Choosing "Edit" on a sale of "Car" opens the Financial Diary page with "Sales of Asset" and "Car" chosen
+  - Scenario S128: Choosing "Edit" on a sale of "Car" in Records opens the filled "Sell" form, with a "Save changes" button
   - Scenario S129: Saving the date 2026/11/10 on an edited sale of "Car" leaves one update of "Car" worth 0, dated 2026/11/10
-  - Scenario S130: Deleting a sale of "Car" removes the 0 update of "Car", and "Car" returns to the "Asset sold" list
+  - Scenario S130: Deleting a sale of "Car" removes the 0 update of "Car", and "Car" returns to the Asset list
+- Rule R106: The Income form refuses the "Sales of Asset" category
+  - Scenario S277: Adding an income under the typed category "Sales of Asset" shows "Sell the asset from the Asset list." and stores nothing
 
 ### Feature F11: Asset purchases
 - Rule R25: A purchase saved on the Asset tab stays with the account under a new asset code

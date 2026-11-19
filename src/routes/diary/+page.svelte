@@ -9,13 +9,14 @@
 	import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import AmountField from '#lib/AmountField.svelte';
-	import { capitalize, expenseDefaults, expenseTypes, owners, sale } from '#lib/category.ts';
+	import { capitalize, expenseDefaults, expenseTypes, owners } from '#lib/category.ts';
 	import { slashDate } from '#lib/date.ts';
 	import { getLocalTimeZone, today } from '@internationalized/date';
 	import AssetList from '#lib/AssetList.svelte';
 	import AssetPurchase from '#lib/AssetPurchase.svelte';
 	import DebtForm from '#lib/DebtForm.svelte';
 	import DebtPayments from '#lib/DebtPayments.svelte';
+	import SellForm from '#lib/SellForm.svelte';
 	import DateField from '#lib/DateField.svelte';
 	import type { PageProps } from './$types';
 
@@ -24,6 +25,7 @@
 		added?: boolean;
 		saved?: string;
 		updated?: number;
+		sold?: string;
 		paid?: boolean;
 		error?: string;
 		field?: string;
@@ -36,7 +38,7 @@
 	const sent = untrack(() => form?.values ?? editing);
 
 	const defaults = {
-		income: ['salary', 'freelance', 'dividend', 'bonus', 'other', sale],
+		income: ['salary', 'freelance', 'dividend', 'bonus', 'other'],
 		expense: Object.keys(expenseDefaults)
 	};
 	const types: [Kind, string][] = [
@@ -65,7 +67,7 @@
 	const kept = $derived(form?.values ?? editing ?? {});
 	const day = slashDate(today(getLocalTimeZone()));
 	let date = $state(sent?.date ?? day);
-	let type = $state((sent?.type ?? untrack(() => data.tab)) as Kind);
+	let type = $state((sent?.type === 'sale' ? 'asset' : (sent?.type ?? untrack(() => data.tab))) as Kind);
 	const sign = $derived(type === 'income' ? '+' : '−');
 	const signColor = $derived(type === 'income' ? 'text-in' : type === 'expense' ? 'text-out' : 'text-chart-4');
 
@@ -78,7 +80,6 @@
 		lastType = (category === kept.category && kept.expenseType) || expenseDefaults[category] || lastType;
 		return lastType;
 	});
-	const held = $derived(data.held);
 	let open = $state(false);
 	let search = $state('');
 	const typed = $derived(search.trim().toLowerCase());
@@ -94,9 +95,6 @@
 	let currency = $state(sent?.currency ?? untrack(() => data.settings!.currency));
 
 	let amount = $state(sent?.amount ?? '');
-
-	const flagged = (name: string) =>
-		form?.field === name ? { 'aria-invalid': true, 'aria-describedby': 'message' } : {};
 
 	const select =
 		'h-11 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30';
@@ -177,7 +175,17 @@
 			/>
 		{/if}
 	{:else if type === 'asset'}
-		{#if data.view === 'list' && !editing}
+		{#if data.selling}
+			<SellForm
+				asset={data.selling}
+				{kept}
+				editing={!!editing}
+				currency={data.settings!.currency}
+				today={day}
+				error={form?.error}
+				invalid={form?.field}
+			/>
+		{:else if data.view === 'list' && !editing}
 			<AssetList
 				list={data.assets}
 				filter={data.filter}
@@ -186,6 +194,7 @@
 				error={form?.error}
 				invalid={form?.field}
 				updated={form?.updated}
+				sold={form?.sold}
 			/>
 		{:else}
 			<AssetPurchase
@@ -262,18 +271,6 @@
 					</Popover.Content>
 				</Popover.Root>
 			</div>
-			{#if type === 'income' && category === sale}
-				<div class="flex flex-col gap-1.5">
-					<Label for="asset">Asset sold</Label>
-					<select id="asset" name="asset" class={select} {...flagged('asset')}>
-						{#each held as asset (asset.code)}
-							<option value={asset.code} selected={asset.code === kept.asset}>{asset.label}</option>
-						{:else}
-							<option value="">No assets recorded yet</option>
-						{/each}
-					</select>
-				</div>
-			{/if}
 			{#if type === 'expense'}
 				<div class="flex flex-col gap-1.5">
 					<Label for="expense-type">Expense type</Label>

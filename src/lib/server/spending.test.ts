@@ -107,7 +107,7 @@ test('a diary salary under its plan reads the shortfall in the unfavourable tone
 
 test('a sale of an asset stays out of income', { meta: { scenario: 'S247' } }, () => {
 	const code = buy('2026/10/01', '5.000.000');
-	diary({ type: 'income', date: '2026/11/05', amount: '6.000.000', category: 'sales of asset', asset: code });
+	diary({ type: 'sale', date: '2026/11/05', amount: '6.000.000', category: 'sales of asset', asset: code });
 
 	expect(section('Income').actual).toBe(0);
 });

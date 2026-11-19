@@ -292,7 +292,7 @@ test(
 		asset('2026/10/01', 'Car', '50.000.000', { cls: 'Other' });
 		income('2026/11/01', '8.000.000');
 		addEntry(db, alice, {
-			type: 'income',
+			type: 'sale',
 			date: '2026/11/02',
 			amount: '50.000.000',
 			currency: 'IDR',

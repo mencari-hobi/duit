@@ -1,7 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 import { register } from './auth';
 import { openDatabase, type Db } from './db';
-import { heldAssets } from './assets';
 import { addEntry, entryCategories, saveEntry } from './entries';
 import { recordHolding } from './holdings-fixture';
 
@@ -189,8 +188,15 @@ test(
 	}
 );
 
-const sale = (fields: Record<string, string> = {}) =>
-	income({ date: '2026-11-03', amount: '150.000.000', category: 'sales of asset', asset: 'AST-0001', ...fields });
+const sale = (fields: Record<string, string> = {}) => ({
+	type: 'sale',
+	date: '2026-11-03',
+	amount: '150.000.000',
+	currency: 'IDR',
+	asset: 'AST-0001',
+	note: '',
+	...fields
+});
 
 test('a sale with a blank note stores the note "Sale of Car"', { meta: { scenario: 'S124' } }, () => {
 	hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
@@ -201,30 +207,36 @@ test('a sale with a blank note stores the note "Sale of Car"', { meta: { scenari
 });
 
 test(
-	'the held assets list each asset whose latest value is above 0, and no liability',
-	{ meta: { scenario: 'S125' } },
+	'saving the sell form with a blank proceeds amount shows "Please enter an amount (numbers only)." and stores nothing',
+	{ meta: { scenario: 'S274' } },
 	() => {
-		hold({ name: 'Savings account' });
 		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
-		hold({ name: 'Car', cls: 'Other', amount: '0' });
-		hold({ name: 'Bond', cls: 'Bond', date: '2026-10-01' });
-		hold({ name: 'Bond', cls: 'Bond', date: '2026-10-02', amount: '0' });
-		hold({ name: 'Bond', cls: 'Bond', amount: '5.000.000' });
-		hold({ name: 'Mortgage loan', cls: 'Liability', term: 'Long term' });
 
-		expect(heldAssets(db, alice).map((row) => row.name)).toEqual(['Savings account', 'Bond']);
+		const result = addEntry(db, alice, sale({ amount: '' }));
+
+		expect(result).toEqual({ message: 'Please enter an amount (numbers only).', field: 'amount' });
+		expect(entryRows()).toEqual([]);
+		expect(assetRows()).toHaveLength(1);
 	}
 );
 
 test(
-	'adding a sale without a chosen asset shows "Choose the asset that was sold." and stores nothing',
-	{ meta: { scenario: 'S127' } },
+	"a sale posted for an asset already sold, or for another account's asset, stores nothing",
+	{ meta: { scenario: 'S276' } },
 	() => {
-		const result = addEntry(db, alice, sale({ asset: '' }));
+		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
+		addEntry(db, alice, sale());
+		const bob = register(db, 'bob', 'password1');
+		if (!('user' in bob)) throw new Error(bob.message);
+		recordHolding(db, bob.user.id, { date: '2026-10-01', amount: '9.000.000', name: 'Bike', cls: 'Other' });
+		recordHolding(db, bob.user.id, { date: '2026-10-01', amount: '4.000.000', name: 'Phone', cls: 'Other' });
+		const before = { entries: entryRows(), assets: assetRows() };
 
-		expect(result).toEqual({ message: 'Choose the asset that was sold.', field: 'asset' });
-		expect(entryRows()).toEqual([]);
-		expect(assetRows()).toEqual([]);
+		const again = addEntry(db, alice, sale({ date: '2026-11-20' }));
+		const foreign = addEntry(db, alice, sale({ asset: 'AST-0002' }));
+
+		expect([again, foreign]).toEqual([expect.objectContaining({ field: 'asset' }), expect.objectContaining({ field: 'asset' })]);
+		expect({ entries: entryRows(), assets: assetRows() }).toEqual(before);
 	}
 );
 
@@ -244,3 +256,30 @@ test(
 		expect(entryRows()).toHaveLength(1);
 	}
 );
+
+test(
+	'adding an income under the typed category "Sales of Asset" shows "Sell the asset from the Asset list." and stores nothing',
+	{ meta: { scenario: 'S277' } },
+	() => {
+		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
+
+		const result = addEntry(db, alice, income({ category: 'Sales of Asset', asset: 'AST-0001' }));
+
+		expect(result).toEqual({ message: 'Sell the asset from the Asset list.', field: 'category' });
+		expect(entryRows()).toEqual([]);
+		expect(assetRows()).toHaveLength(1);
+	}
+);
+
+test(
+	'for an account with a stored sale, the income categories lack "sales of asset"',
+	{ meta: { scenario: 'S273' } },
+	() => {
+		hold({ name: 'Car', cls: 'Other', date: '2026-10-01' });
+		addEntry(db, alice, sale());
+		addEntry(db, alice, income({ category: 'bonus' }));
+
+		expect(entryCategories(db, alice).income).toEqual(['bonus']);
+	}
+);
+
