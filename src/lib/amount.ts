@@ -4,8 +4,10 @@ export function group(text: string) {
 	return decimals.length ? `${grouped},${decimals.join('')}` : grouped;
 }
 
-export function regroup(input: HTMLInputElement) {
+export function regroup(event: Event & { currentTarget: HTMLInputElement }) {
+	const input = event.currentTarget;
 	const caret = input.selectionStart ?? input.value.length;
+	if (event instanceof InputEvent && event.data === '.') input.value = `${input.value.slice(0, caret - 1)},${input.value.slice(caret)}`;
 	const kept = input.value.slice(0, caret).replace(/[^\d,]/g, '').length;
 	const text = group(input.value);
 	input.value = text;

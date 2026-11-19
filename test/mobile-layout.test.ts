@@ -180,3 +180,19 @@ test(
 		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
 	}
 );
+
+test(
+	'the unit field of a cash purchase is wider than its currency picker on a 360 px wide screen',
+	{ meta: { scenario: 'S274' } },
+	async () => {
+		const { cookie } = await registered();
+
+		const page = await openPage('/diary?tab=asset', cookie, phoneWidth);
+		await page.getByLabel('Asset type').selectOption('Cash');
+
+		const unit = (await page.getByLabel('Unit', { exact: true }).boundingBox())!;
+		const currency = (await page.getByLabel('Unit currency').boundingBox())!;
+		expect(unit.width).toBeGreaterThan(currency.width);
+		expect(await pageWidth(page)).toBeLessThanOrEqual(phoneWidth);
+	}
+);

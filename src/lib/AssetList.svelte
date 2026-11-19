@@ -93,7 +93,7 @@
 									inputmode="decimal"
 									autocomplete="off"
 									placeholder={shown(row.value)}
-									oninput={(event) => regroup(event.currentTarget)}
+									oninput={(event) => regroup(event)}
 									{...flagged(`value-${row.code}`)}
 									class={[cell, 'w-36']}
 								/>

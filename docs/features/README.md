@@ -25,6 +25,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
   - Scenario S211: On a 360 px wide screen, `/diary` on the Asset list with an asset fits the screen width
   - Scenario S238: On a 360 px wide screen, `/diary` on Debt payment with a debt fits the screen width
+  - Scenario S274: On a 360 px wide screen, `/diary` on a "Cash" purchase shows the unit field wider than its currency picker
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -87,6 +88,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S56: Typing 1250000 into the amount shows "1.250.000"
   - Scenario S57: Adding the amount "1.250.000" stores 1250000
   - Scenario S58: Adding the amount "12,5" stores 12.5
+  - Scenario S273: Typing 2.5 into the unit shows "2,5", so a phone keyboard with only a dot key can type decimals
 - Rule R22: The category list follows the entry type
   - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", and "Other"
   - Scenario S273: For an account with a stored sale, the income category list lacks "Sales of Asset"

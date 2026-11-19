@@ -47,7 +47,7 @@
 			autocomplete="off"
 			placeholder="0"
 			value={amount}
-			oninput={(event) => (amount = regroup(event.currentTarget))}
+			oninput={(event) => (amount = regroup(event))}
 			{...flagged('amount')}
 			class={[
 				'h-11 w-full min-w-0 bg-transparent font-heading font-semibold tabular-nums outline-none placeholder:text-muted-foreground/50',
