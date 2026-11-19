@@ -8,9 +8,9 @@ import { isCurrency } from './settings';
 
 type EntryFields = Record<string, string | undefined>;
 
-type Refusal = { message: string; field: 'date' | 'amount' | 'currency' | 'asset' };
+type Refusal = { message: string; field: 'date' | 'amount' | 'currency' | 'asset' | 'category' };
 
-type Added = { added: true };
+type Added = { added: true } | { sold: string };
 
 type Common = { date: string; amount: number; currency: string; note: string };
 
@@ -39,12 +39,12 @@ function addSale(db: Db, userId: number, fields: EntryFields, common: Common, id
 		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, sale_id, code, unit, unit_currency)
 		VALUES (?, ?, ?, ?, 0, ?, ?, 0, '', ?, ?, ?, ?)`
 	).run(userId, common.date, sold.name, sold.class, sold.currency, sold.source, entry.lastInsertRowid, sold.code, sold.unit, sold.unit_currency);
-	return { added: true };
+	return { sold: sold.code };
 }
 
 function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common: Common, id: number | null): Refusal | Added {
 	const expense = fields.type === 'expense';
-	if (!expense && field(fields, 'category').toLowerCase() === sale) return addSale(db, userId, fields, common, id);
+	if (!expense && field(fields, 'category').toLowerCase() === sale) return { message: 'Sell the asset from the Asset list.', field: 'category' };
 	db.prepare(
 		`INSERT INTO diary_entries (id, user_id, kind, date, amount, currency, category, expense_type, owner, note)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -66,6 +66,7 @@ function addIncomeOrExpense(db: Db, userId: number, fields: EntryFields, common:
 function insert(db: Db, userId: number, fields: EntryFields, id: number | null): Refusal | Added {
 	const common = parseCommon(fields);
 	if ('message' in common) return common;
+	if (fields.type === 'sale') return addSale(db, userId, fields, common, id);
 	return addIncomeOrExpense(db, userId, fields, common, id);
 }
 
@@ -103,7 +104,7 @@ export function entryCategories(db: Db, userId: number) {
 		.prepare('SELECT DISTINCT kind, category FROM diary_entries WHERE user_id = ? ORDER BY category')
 		.all(userId) as { kind: 'income' | 'expense'; category: string }[];
 	return {
-		income: rows.filter((row) => row.kind === 'income').map((row) => row.category),
+		income: rows.filter((row) => row.kind === 'income' && row.category !== sale).map((row) => row.category),
 		expense: rows.filter((row) => row.kind === 'expense').map((row) => row.category)
 	};
 }

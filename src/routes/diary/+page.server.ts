@@ -23,12 +23,15 @@ export const load: PageServerLoad = ({ locals, url }) => {
 	const debtView = url.searchParams.get('view') === 'payments' && !editing ? 'payments' : 'add';
 	const filter = url.searchParams.get('type') ?? '';
 	const { currency } = readSettings(database(), user.id);
+	const held = heldAssets(database(), user.id).map((row) => ({ code: row.code, label: assetLabel(row.code, row.name) }));
+	const sell = url.searchParams.get('sell');
+	const selling = editing?.type === 'sale' ? { code: editing.asset, label: editing.label } : (held.find((row) => row.code === sell) ?? null);
 	const today = todayIso();
 	const months = debtView === 'payments' ? reportingMonths(database(), user.id, today) : [];
 	const asked = url.searchParams.get('month') ?? '';
 	const month = months.some((option) => option.value === asked) ? asked : currentMonth(database(), user.id, today);
 	return {
-		tab: editing?.type === 'debt' ? 'debt' : tabs.includes(tab) ? tab : 'income',
+		tab: editing?.type === 'debt' ? 'debt' : editing?.type === 'sale' ? 'asset' : tabs.includes(tab) ? tab : 'income',
 		view,
 		debtView,
 		filter,
@@ -37,7 +40,7 @@ export const load: PageServerLoad = ({ locals, url }) => {
 		debts: debtView === 'payments' ? debtTable(database(), user.id, month) : null,
 		nextDebtCode: nextDebtCode(database(), user.id),
 		categories: entryCategories(database(), user.id),
-		held: heldAssets(database(), user.id).map((row) => ({ code: row.code, label: assetLabel(row.code, row.name) })),
+		selling,
 		nextCode: nextAssetCode(database(), user.id),
 		dreams: planDreams(database(), user.id),
 		assets: view === 'list' ? assetList(database(), user.id, currency, filter) : null,
@@ -79,6 +82,7 @@ export const actions: Actions = {
 		if ('missing' in result) error(404, 'Entry not found');
 		if ('message' in result) return fail(400, { error: result.message, field: result.field, values });
 		if (values.id) redirect(303, '/records');
+		if ('sold' in result) return { sold: result.sold, values: { type: 'asset' } };
 		const { type, date, category, currency } = values;
 		return { added: true, values: { type, date, category, currency } };
 	}

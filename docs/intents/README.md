@@ -97,3 +97,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I23: A Plan dream counts in the budget only while the user saves for it
 - Why: A dream counted forever, even after its months passed, so the budget read a saving the user no longer plans
 - Serves: R103, R104, R105, S152, S183, S266, S271
+
+## Intent I24: The Income categories hold earnings alone, and a sale starts from the Asset list
+- Why: The mockup drops "Sales of Asset" from the Diary Income list, and the user picked a "Sell" button on each asset row
+- Serves: F20, S39, S273

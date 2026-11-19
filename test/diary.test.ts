@@ -63,13 +63,13 @@ test(
 );
 
 test(
-	'with income chosen, the category list shows salary, freelance, dividend, bonus, other, and sales of asset',
+	'with income chosen, the category list shows salary, freelance, dividend, bonus, and other',
 	{ meta: { scenario: 'S39' } },
 	async () => {
 		const { cookie } = await registered();
 		const page = await openPage('/diary', cookie);
 
-		expect(await categoryNames(page)).toEqual(['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other', 'Sales of Asset']);
+		expect(await categoryNames(page)).toEqual(['Salary', 'Freelance', 'Dividend', 'Bonus', 'Other']);
 	}
 );
 
@@ -350,47 +350,73 @@ test(
 	}
 );
 
-async function chooseSale(page: Page) {
-	await (await openCategories(page)).getByText('Sales of Asset', { exact: true }).click();
+async function openSellForm(cookie: string) {
+	const page = await openPage('/diary?tab=asset&view=list', cookie);
+	await page.getByRole('row', { name: /AST-0001/ }).getByRole('link', { name: 'Sell' }).click();
+	await page.getByRole('heading', { name: /^Sell / }).waitFor();
+	return page;
 }
 
 test(
-	'selling car for 150.000.000 stores the proceeds as income and an update of car worth 0 from the sale date',
+	'choosing sell on car, then saving the date and the proceeds, stores the proceeds and an update of car worth 0, and shows "Sold AST-0001 ✓"',
 	{ meta: { scenario: 'S123' } },
 	async () => {
 		const { name, cookie } = await registered();
 		await addHolding(cookie, { date: '2026/10/01', amount: '150.000.000', name: 'Car', cls: 'Other' });
-		const page = await openPage('/diary', cookie);
-		await chooseSale(page);
-		await page.getByLabel('Asset sold').selectOption({ label: 'AST-0001 · Car' });
-		await page.getByLabel('Amount').pressSequentially('150000000');
-		await page.getByLabel('Date').fill('2026-11-03');
+		const page = await openSellForm(cookie);
+		await page.getByLabel('Date').fill('2026/11/03');
+		await page.getByLabel('Proceeds').pressSequentially('150000000');
 
-		await page.getByRole('button', { name: 'Add entry' }).click();
+		await page.getByRole('button', { name: 'Save sale' }).click();
 
-		await expect.poll(() => page.getByRole('status').textContent()).toBe('Added ✓');
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Sold AST-0001 ✓');
 		expect(rows('entries', name)).toEqual([
 			expect.objectContaining({ kind: 'income', date: '2026-11-03', amount: 150000000, category: 'sales of asset' })
 		]);
 		expect(rows('assets', name)).toContainEqual(
-			expect.objectContaining({ name: 'Car', date: '2026-11-03', value: 0, acquisition: 0 })
+			expect.objectContaining({ code: 'AST-0001', date: '2026-11-03', value: 0, acquisition: 0 })
 		);
 	}
 );
 
 test(
-	'for an account without a held asset, the asset sold list reads "No assets recorded yet"',
-	{ meta: { scenario: 'S126' } },
+	'choosing sell on the row of AST-0001 opens a form headed "Sell AST-0001 · Car", with today\'s date and the default currency',
+	{ meta: { scenario: 'S275' } },
 	async () => {
 		const { cookie } = await registered();
-		const page = await openPage('/diary', cookie);
+		await post('/?/settings', { currency: 'USD', startDay: '1' }, cookie);
+		await addHolding(cookie, { date: '2026/10/01', amount: '10.000', name: 'Car', cls: 'Other', currency: 'USD' });
 
-		await chooseSale(page);
+		const page = await openSellForm(cookie);
 
-		expect(await page.getByLabel('Asset sold').locator('option').allTextContents()).toEqual(['No assets recorded yet']);
+		expect(await page.getByRole('heading', { name: /^Sell / }).textContent()).toBe('Sell AST-0001 · Car');
+		expect(await page.getByLabel('Date').inputValue()).toBe(slashed(new Date()));
+		expect(await page.getByRole('combobox', { name: /^Currency/ }).textContent()).toContain('USD');
 	}
 );
 
+test(
+	'choosing edit on a sale of car in records opens the sell form of car filled, with a "Save changes" button',
+	{ meta: { scenario: 'S128' } },
+	async () => {
+		const { cookie } = await registered();
+		await addHolding(cookie, { date: '2026/10/01', amount: '150.000.000', name: 'Car', cls: 'Other' });
+		const sell = await openSellForm(cookie);
+		await sell.getByLabel('Date').fill('2026/11/03');
+		await sell.getByLabel('Proceeds').pressSequentially('150000000');
+		await sell.getByRole('button', { name: 'Save sale' }).click();
+		await expect.poll(() => sell.getByRole('status').textContent()).toBe('Sold AST-0001 ✓');
+		const page = await openPage('/records', cookie);
+
+		await page.getByRole('row', { name: /Sales of Asset/ }).getByRole('link', { name: 'Edit' }).click();
+
+		await page.getByRole('heading', { name: /^Sell / }).waitFor();
+		expect(await page.getByRole('heading', { name: /^Sell / }).textContent()).toBe('Sell AST-0001 · Car');
+		expect(await page.getByLabel('Date').inputValue()).toBe('2026/11/03');
+		expect(await page.getByLabel('Proceeds').inputValue()).toBe('150.000.000');
+		expect(await page.getByRole('button', { name: 'Save changes' }).count()).toBe(1);
+	}
+);
 
 async function openAssetTab(cookie: string, view = 'purchase') {
 	const page = await openPage(`/diary?tab=asset&view=${view}`, cookie);
