@@ -248,7 +248,7 @@
 							inputmode="decimal"
 							autocomplete="off"
 							value={dreamAmount}
-							oninput={(event) => (dreamAmount = regroup(event.currentTarget))}
+							oninput={(event) => (dreamAmount = regroup(event))}
 							{...flagged('amount')}
 							class={field}
 						/>

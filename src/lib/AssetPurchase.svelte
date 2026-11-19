@@ -5,6 +5,7 @@
 	import DateField from '#lib/DateField.svelte';
 	import { group, parseAmount, regroup } from '#lib/amount.ts';
 	import { sources, typeNames, unitOf } from '#lib/asset.ts';
+	import { cn } from '#lib/utils.ts';
 
 	type Props = {
 		kept: Record<string, string>;
@@ -75,12 +76,12 @@
 					inputmode="decimal"
 					autocomplete="off"
 					value={unit}
-					oninput={(event) => (unit = regroup(event.currentTarget))}
+					oninput={(event) => (unit = regroup(event))}
 					{...flagged('unit')}
 					class={field}
 				/>
 				{#if !unitName}
-					<select name="unitCurrency" aria-label="Unit currency" bind:value={unitCurrency} class={[select, 'w-24 shrink-0']}>
+					<select name="unitCurrency" aria-label="Unit currency" bind:value={unitCurrency} class={cn(select, 'w-24 shrink-0')}>
 						{#each unitCurrencies as code (code)}
 							<option>{code}</option>
 						{/each}
@@ -97,7 +98,7 @@
 				inputmode="decimal"
 				autocomplete="off"
 				value={cost}
-				oninput={(event) => (cost = regroup(event.currentTarget))}
+				oninput={(event) => (cost = regroup(event))}
 				{...flagged('amount')}
 				class={field}
 			/>

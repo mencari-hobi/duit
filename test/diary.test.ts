@@ -495,6 +495,20 @@ test(
 	}
 );
 
+test(
+	'typing 2.5 into the unit shows "2,5", since a typed dot marks the decimals',
+	{ meta: { scenario: 'S273' } },
+	async () => {
+		const { cookie } = await registered();
+		const page = await openAssetTab(cookie);
+		await page.getByLabel('Asset type').selectOption('Gold');
+
+		await page.getByLabel('Unit (gr)').pressSequentially('2.5');
+
+		expect(await page.getByLabel('Unit (gr)').inputValue()).toBe('2,5');
+	}
+);
+
 test('the purchase lists follow the spec', { meta: { scenario: 'S195' } }, async () => {
 	const { cookie } = await registered();
 	const page = await openAssetTab(cookie);

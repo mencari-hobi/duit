@@ -74,7 +74,7 @@
 				inputmode="decimal"
 				autocomplete="off"
 				value={amount}
-				oninput={(event) => (amount = regroup(event.currentTarget))}
+				oninput={(event) => (amount = regroup(event))}
 				{...flagged('amount')}
 				class={field}
 			/>
@@ -101,7 +101,7 @@
 				inputmode="decimal"
 				autocomplete="off"
 				value={installment}
-				oninput={(event) => (installment = regroup(event.currentTarget))}
+				oninput={(event) => (installment = regroup(event))}
 				{...flagged('installment')}
 				class={field}
 			/>
