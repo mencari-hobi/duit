@@ -322,7 +322,10 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S107: Incomes of 8.000.000 under "salary" and 2.000.000 under "bonus" in 2026/11 read "Total Income" 10,00, with "Salary" 8,00 and "Bonus" 2,00 under it
   - Scenario S108: An expense of 3.000.000 under "mortgage" as "Fixed - Essential" reads "Total Expense" 3,00, with "Fixed - Essential" 3,00 and "Mortgage" 3,00 under it
   - Scenario S109: A "Cash" asset funded by "Salary" growing from 10.000.000 to 12.000.000 reads "Total Saving" 2,00, with "Cash" 2,00 under it, and an asset funded by "Debt" stays out of saving
-  - Scenario S110: Income of 10.000.000, saving of 2.000.000, and expenses of 4.000.000 read "Remaining Amount (income − saving − expense)" 4,00
+  - Scenario S110: Income of 10.000.000, debt payments of 2.000.000, saving of 2.000.000, and expenses of 4.000.000 read "Remaining Amount (income − debt payment − saving − expense)" 2,00
+- Rule R101: The income and expense section totals the installments ticked Paid in each reporting month, by debt category
+  - Scenario S261: A "Car installment" debt of 5.200.000 a month ticked Paid on 2026/11/18 reads "Total Debt payment" 5,20 in the column "2026/11", with "Car installment" 5,20 under it
+  - Scenario S262: A tick for the reporting month 2026-10 saved on 2026/11/18 counts in "2026/11" and leaves "Total Debt payment" of "2026/10" at "–"
 - Rule R58: The report keeps asset sales out of "Total Income" and shows them on a memo line
   - Scenario S133: A salary of 8.000.000 and a sale of 50.000.000 in 2026/11 read "Total Income" 8,00 and "Sales of Asset (memo, not counted as income)" 50,00
   - Scenario S134: Three reporting months without a sale leave out the memo line
@@ -335,11 +338,14 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S236: A debt over 36 months adds its remaining debt to "Long term", and a debt over 12 months or less adds it to "Short term"
 - Rule R50: The ratios section shows nine ratios of the month
   - Scenario S114: Income of 10.000.000, fixed expenses of 3.000.000, saving of 2.000.000, a "Cash" asset of 6.000.000, a "Property" asset of 2.000.000, and a liability of 2.000.000 read saving rate 20.0%, fixed expense ÷ income 30.0%, debt ÷ total assets 25.0%, liquidity ratio 75.0%, liquid assets ÷ net worth 100.0%, non-cash assets ÷ net worth 33.3%, and net worth ÷ total assets 75.0%
-  - Scenario S115: Expenses of 3.000.000 under "mortgage" and 1.000.000 under "car installment" against income of 10.000.000 read debt service ratio 40.0% and non-mortgage service ratio 10.0%
   - Scenario S116: A month without income reads "–" for every ratio divided by income
+- Rule R102: The debt service ratios divide the month's debt payments by income, and old installment expenses count as plain expenses
+  - Scenario S115: Paid installments of 3.000.000 on a "Mortgage" debt and 1.000.000 on a "Car installment" debt against income of 10.000.000 read "6. Debt service ratio (debt payments ÷ income)" 40.0% and "7. Non-mortgage service ratio (non-mortgage debt payments ÷ income)" 10.0%
+  - Scenario S263: An expense of 3.000.000 under "mortgage" against income of 10.000.000 reads debt service ratio 0.0% and "Total Expense" 3,00
 - Rule R51: The report shows amounts in millions of the default currency with two decimals, and counts entries in that currency alone
   - Scenario S117: An amount of 12.500.000 reads "12,50", and a zero reads "–"
   - Scenario S118: With the default currency "IDR", an expense in "USD" stays out of every total
+  - Scenario S264: With the default currency "IDR", a paid installment of a "USD" debt stays out of "Total Debt payment"
 - Rule R52: The report of an account without entries reads "No data yet."
   - Scenario S119: A new account opening `/snapshot` reads "No data yet."
 - Rule R53: On a phone, a report table wider than its card fades at its right edge until scrolled to its end

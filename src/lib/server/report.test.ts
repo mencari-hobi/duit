@@ -5,7 +5,7 @@ import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
 import { recordHolding } from './holdings-fixture';
 import { loadReport } from './report';
-import { saveDebt } from './debts';
+import { saveDebt, savePayments } from './debts';
 import { saveSettings } from './settings';
 
 let db: Db;
@@ -104,19 +104,6 @@ test(
 );
 
 test(
-	'income of 10.000.000, saving of 2.000.000, and expenses of 4.000.000 leave a remaining amount of 4.000.000',
-	{ meta: { scenario: 'S110' } },
-	() => {
-		asset('2026/10/01', 'Savings account', '10.000.000');
-		income('2026/11/01', '10.000.000');
-		asset('2026/11/01', 'Savings account', '12.000.000');
-		expense('2026/11/03', '4.000.000');
-
-		expect(line('Remaining Amount (income − saving − expense)')).toBe(4000000);
-	}
-);
-
-test(
 	'a cash asset of 6.000.000 and a property asset of 2.000.000 read liquid, non-liquid, and total assets',
 	{ meta: { scenario: 'S111' } },
 	() => {
@@ -209,32 +196,6 @@ test(
 		expect(ratios).toEqual([0.2, 0.3, 0.25, 0.75, 1, 0.333, 0.75]);
 	}
 );
-
-test(
-	'mortgage and car installment expenses against an income of 10.000.000 read the debt service ratios',
-	{ meta: { scenario: 'S115' } },
-	() => {
-		income('2026/11/01', '10.000.000');
-		expense('2026/11/03', '3.000.000', { category: 'mortgage', expenseType: 'Fixed - Essential' });
-		expense('2026/11/04', '1.000.000', { category: 'car installment', expenseType: 'Fixed - Essential' });
-
-		expect([
-			line('6. Debt service ratio (installments ÷ income)'),
-			line('7. Non-mortgage service ratio (non-mortgage installments ÷ income)')
-		]).toEqual([0.4, 0.1]);
-	}
-);
-
-test('a month without income leaves every ratio divided by income empty', { meta: { scenario: 'S116' } }, () => {
-	expense('2026/11/03', '3.000.000', { category: 'mortgage', expenseType: 'Fixed - Essential' });
-
-	expect([
-		line('1. Saving rate (saving ÷ income)'),
-		line('2. Fixed expense ÷ income'),
-		line('6. Debt service ratio (installments ÷ income)'),
-		line('7. Non-mortgage service ratio (non-mortgage installments ÷ income)')
-	]).toEqual([null, null, null, null]);
-});
 
 test('an amount of 12.500.000 reads 12,50 and a zero reads a dash', { meta: { scenario: 'S117' } }, () => {
 	expect([millions(12500000), millions(0)]).toEqual(['12,50', '–']);
@@ -365,5 +326,113 @@ test(
 
 		expect(report.months.at(-1)).toBe('2026/11');
 		expect([value('Long term'), value('Short term')]).toEqual([187200000 - 18 * 5200000, 12000000 - 2 * 1000000]);
+	}
+);
+
+const carDebt = { category: 'Car installment', amount: '150.000.000', tenor: '36', paymentType: 'Monthly', start: '2025/06/25', end: '2028/05/25', installment: '5.200.000' };
+
+function borrow(fields: Record<string, string> = {}) {
+	const result = saveDebt(db, alice, { ...carDebt, ...fields });
+	if (!('saved' in result)) throw new Error(JSON.stringify(result));
+	return result.saved!;
+}
+
+function pay(codes: string | string[], month: string, paidOn: string) {
+	savePayments(db, alice, month, Object.fromEntries([codes].flat().map((code) => [`paid-${code}`, 'on'])), paidOn);
+}
+
+function snapshot(today = '2026-11-18') {
+	const report = loadReport(db, alice, today)!;
+	const value = (label: string, at = -1) => report.sections.flatMap((section) => section.lines).find((row) => row.label === label)?.values.at(at);
+	return { report, value };
+}
+
+test(
+	'income of 10.000.000, debt payments of 2.000.000, saving of 2.000.000, and expenses of 4.000.000 leave a remaining amount of 2.000.000',
+	{ meta: { scenario: 'S110' } },
+	() => {
+		asset('2026/10/01', 'Savings account', '10.000.000');
+		income('2026/11/01', '10.000.000');
+		asset('2026/11/01', 'Savings account', '12.000.000');
+		expense('2026/11/03', '4.000.000');
+		pay(borrow({ installment: '2.000.000' }), '2026-11', '2026-11-10');
+
+		expect(snapshot().value('Remaining Amount (income − debt payment − saving − expense)')).toBe(2000000);
+	}
+);
+
+test(
+	'a car installment of 5.200.000 ticked paid on 2026/11/18 reads total debt payment with car installment under it',
+	{ meta: { scenario: 'S261' } },
+	() => {
+		pay(borrow(), '2026-11', '2026-11-18');
+
+		const { report, value } = snapshot();
+		expect(report.months.at(-1)).toBe('2026/11');
+		expect([value('Total Debt payment'), value('Car installment')]).toEqual([5200000, 5200000]);
+	}
+);
+
+test(
+	'a tick for 2026-10 saved on 2026/11/18 counts in 2026/11 and leaves 2026/10 without debt payment',
+	{ meta: { scenario: 'S262' } },
+	() => {
+		pay(borrow(), '2026-10', '2026-11-18');
+
+		const { report, value } = snapshot();
+		expect(report.months.slice(-2)).toEqual(['2026/10', '2026/11']);
+		expect([value('Total Debt payment', -2), value('Total Debt payment')]).toEqual([0, 5200000]);
+	}
+);
+
+test(
+	'paid installments on a mortgage and a car installment against an income of 10.000.000 read the debt service ratios',
+	{ meta: { scenario: 'S115' } },
+	() => {
+		income('2026/11/01', '10.000.000');
+		pay([borrow({ category: 'Mortgage', installment: '3.000.000' }), borrow({ installment: '1.000.000' })], '2026-11', '2026-11-10');
+
+		const { value } = snapshot();
+		expect([
+			value('6. Debt service ratio (debt payments ÷ income)'),
+			value('7. Non-mortgage service ratio (non-mortgage debt payments ÷ income)')
+		]).toEqual([0.4, 0.1]);
+	}
+);
+
+test(
+	'an expense under mortgage reads a debt service ratio of 0 and counts in the total expense',
+	{ meta: { scenario: 'S263' } },
+	() => {
+		income('2026/11/01', '10.000.000');
+		expense('2026/11/03', '3.000.000', { category: 'mortgage', expenseType: 'Fixed - Essential' });
+
+		const { value } = snapshot();
+		expect([value('6. Debt service ratio (debt payments ÷ income)'), value('Total Expense')]).toEqual([0, 3000000]);
+	}
+);
+
+test('a month without income leaves every ratio divided by income empty', { meta: { scenario: 'S116' } }, () => {
+	expense('2026/11/03', '3.000.000', { category: 'mortgage', expenseType: 'Fixed - Essential' });
+
+	const { value } = snapshot();
+	expect([
+		value('1. Saving rate (saving ÷ income)'),
+		value('2. Fixed expense ÷ income'),
+		value('6. Debt service ratio (debt payments ÷ income)'),
+		value('7. Non-mortgage service ratio (non-mortgage debt payments ÷ income)')
+	]).toEqual([null, null, null, null]);
+});
+
+test(
+	'with the default currency IDR, a paid installment of a USD debt stays out of the total debt payment',
+	{ meta: { scenario: 'S264' } },
+	() => {
+		saveSettings(db, alice, { currency: 'USD', startDay: '1' });
+		const dollars = borrow({ installment: '100' });
+		saveSettings(db, alice, { currency: 'IDR', startDay: '1' });
+		pay([dollars, borrow()], '2026-11', '2026-11-10');
+
+		expect(snapshot().value('Total Debt payment')).toBe(5200000);
 	}
 );

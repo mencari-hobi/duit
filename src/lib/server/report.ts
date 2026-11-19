@@ -3,10 +3,10 @@ import { capitalize, sale } from '#lib/category.ts';
 import type { Line, Report } from '#lib/report.ts';
 import { expenseTypes, latestHoldings, monthOf } from './dashboard';
 import type { Db } from './db';
-import { debtHoldings, todayIso } from './debts';
+import { debtHoldings, dueIn, todayIso, type DebtRow } from './debts';
 import { readSettings } from './settings';
 
-type Flow = { kind: 'income' | 'expense'; date: string; amount: number; category: string; expenseType: string | null };
+type Flow = { kind: 'income' | 'expense' | 'debt'; date: string; amount: number; category: string; expenseType: string | null };
 
 type Holding = { date: string; name: string; class: string; value: number; source: string | null; term: string | null; acquisition: number | null; code: string | null };
 
@@ -16,7 +16,6 @@ type Monthly<T> = T & { month: string };
 
 const nonLiquid = typeNames.filter((name) => !liquidTypes.includes(name));
 const classes = typeNames;
-const installmentCategories = ['mortgage', 'car installment', 'debt payment', 'other installment'];
 
 const add = (bag: Bag, key: string, amount: number) => (bag[key] = (bag[key] ?? 0) + amount);
 const total = (bag: Bag) => Object.values(bag).reduce((sum, amount) => sum + amount, 0);
@@ -36,11 +35,14 @@ function ownFunded(holdings: Holding[]) {
 function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month: string, before: string | undefined) {
 	const income: Bag = {};
 	const expense: { [type: string]: Bag } = {};
+	const owed: Bag = {};
 	let fixed = 0;
-	let installments = 0;
-	let mortgage = 0;
 	let sales = 0;
 	for (const row of flows.filter((row) => row.month === month)) {
+		if (row.kind === 'debt') {
+			add(owed, row.category, row.amount);
+			continue;
+		}
 		if (row.kind === 'income') {
 			if (row.category === sale) sales += row.amount;
 			else add(income, row.category, row.amount);
@@ -49,8 +51,6 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 		const type = row.expenseType ?? '';
 		add((expense[type] ??= {}), row.category, row.amount);
 		if (type.startsWith('Fixed')) fixed += row.amount;
-		if (installmentCategories.includes(row.category)) installments += row.amount;
-		if (row.category === 'mortgage') mortgage += row.amount;
 	}
 	const holdings = latestHoldings(updates, month);
 	const own = ownFunded(holdings);
@@ -82,9 +82,10 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 		assets,
 		cost,
 		debt,
+		owed,
 		fixed,
-		installments,
-		mortgage,
+		owedTotal: total(owed),
+		mortgage: owed.Mortgage ?? 0,
 		incomeTotal,
 		expenseTotal,
 		savingTotal: total(saving),
@@ -105,7 +106,18 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 				FROM diary_entries WHERE user_id = ? AND currency = ?`
 			)
 			.all(userId, currency) as Flow[]
-	).map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
+	)
+		.concat(
+			(
+				db
+					.prepare(
+						`SELECT diary_debts.*, month AS due, paid_date FROM diary_debt_payments JOIN diary_debts ON diary_debts.id = debt_id
+						WHERE user_id = ? AND currency = ?`
+					)
+					.all(userId, currency) as (DebtRow & { due: string; paid_date: string })[]
+			).map((paid) => ({ kind: 'debt', date: paid.paid_date, amount: dueIn(paid, paid.due, startDay), category: paid.category, expenseType: null }))
+		)
+		.map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
 	const updates = (
 		db
 			.prepare(
@@ -143,6 +155,8 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 		sum('Total Income', (c) => c.incomeTotal),
 		...keys((c) => c.income).map((name) => line(capitalize(name), 1, (c) => c.income[name] ?? 0)),
 		...(columns.some((c) => c.sales) ? [line('Sales of Asset (memo, not counted as income)', 1, (c) => c.sales)] : []),
+		sum('Total Debt payment', (c) => c.owedTotal),
+		...keys((c) => c.owed).map((name) => line(name, 1, (c) => c.owed[name] ?? 0)),
 		sum('Total Saving', (c) => c.savingTotal),
 		...classes.filter(inAnyColumn((c) => c.saving)).map((name) => line(name, 1, (c) => c.saving[name] ?? 0)),
 		sum('Total Expense', (c) => c.expenseTotal),
@@ -152,7 +166,7 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 				line(type, 1, (c) => total(c.expense[type] ?? {}), { strong: true }),
 				...keys((c) => c.expense[type]).map((name) => line(capitalize(name), 2, (c) => c.expense[type]?.[name] ?? 0))
 			]),
-		grand('Remaining Amount (income − saving − expense)', (c) => c.incomeTotal - c.savingTotal - c.expenseTotal)
+		grand('Remaining Amount (income − debt payment − saving − expense)', (c) => c.incomeTotal - c.owedTotal - c.savingTotal - c.expenseTotal)
 	];
 	const worth = [
 		sum('Liquid assets', (c) => c.liquid),
@@ -175,10 +189,8 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 		share('3. Debt ÷ total assets', (c) => ratio(c.debtTotal, c.assetTotal)),
 		share('4. Liquidity ratio (liquid ÷ total assets)', (c) => ratio(c.liquid, c.assetTotal)),
 		share('5. Liquid assets ÷ net worth', (c) => ratio(c.liquid, c.worth)),
-		share('6. Debt service ratio (installments ÷ income)', (c) => ratio(c.installments, c.incomeTotal)),
-		share('7. Non-mortgage service ratio (non-mortgage installments ÷ income)', (c) =>
-			ratio(c.installments - c.mortgage, c.incomeTotal)
-		),
+		share('6. Debt service ratio (debt payments ÷ income)', (c) => ratio(c.owedTotal, c.incomeTotal)),
+		share('7. Non-mortgage service ratio (non-mortgage debt payments ÷ income)', (c) => ratio(c.owedTotal - c.mortgage, c.incomeTotal)),
 		share('8. Non-cash assets ÷ net worth', (c) => ratio(c.assetTotal - c.liquid, c.worth)),
 		share('9. Net worth ÷ total assets', (c) => ratio(c.worth, c.assetTotal))
 	];

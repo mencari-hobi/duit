@@ -89,3 +89,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I21: Saving matches purchases to Plan dreams through an optional link
 - Why: The user chose the Spec's proposed "Linked dream" field, so each dream's saving reads against its budget
 - Serves: R96, R99
+
+## Intent I22: The Monthly report reads debt payments from the Diary Debt payment tab
+- Why: The Spec moves installments out of expenses, so every debt ratio reads Debt payment, and the user wants Remaining to match the Spending Report's Free Cash Flow
+- Serves: R101, R102, S110, S264
