@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { BarChart } from 'layerchart';
 	import Fit from '#lib/Fit.svelte';
-	import { barSeries, chartData, mio, percent, stackBase, tickLabel, ticks, type MonthChart } from '#lib/chart.ts';
+	import MonthTip from '#lib/MonthTip.svelte';
+	import { barSeries, chartData, mio, percent, stackBase, tickLabel, ticks, type MonthChart, type MonthRow } from '#lib/chart.ts';
 
 	let { id, rows, series, layout = 'group', line }: MonthChart = $props();
+
+	let hover = $state<{ row: MonthRow; x: number } | null>(null);
 
 	const height = 240;
 	const data = $derived(chartData(rows, series));
@@ -75,8 +78,33 @@
 								<circle {cx} {cy} r="3" style:fill={line.color} style:stroke="var(--card)" stroke-width="1.5" />
 							{/each}
 						{/if}
+						{@const slot = (context.xScale as unknown as { step(): number }).step()}
+						{#each rows as row (row.month)}
+							{@const x = context.xScale(row.month) + band / 2}
+							<rect
+								x={x - slot / 2}
+								y={pad.top}
+								width={slot}
+								height={height - pad.top - pad.bottom}
+								fill="transparent"
+								class={hover?.row === row ? 'fill-foreground/5' : ''}
+								role="presentation"
+								onpointerenter={() => (hover = { row, x })}
+								onpointerleave={() => (hover = null)}
+							/>
+						{/each}
 					{/snippet}
 				</BarChart>
+				{#if hover && [...series, ...(line ? [line] : [])].some((s) => s.value(hover!.row) !== 0)}
+					<div
+						class="pointer-events-none absolute z-10"
+						style:top="{pad.top}px"
+						style:left="{hover.x}px"
+						style:transform={hover.x > wide / 2 ? 'translateX(calc(-100% - 12px))' : 'translateX(12px)'}
+					>
+						<MonthTip row={hover.row} {series} {line} />
+					</div>
+				{/if}
 			</div>
 		</div>
 	{/snippet}

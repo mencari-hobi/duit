@@ -103,3 +103,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I25: Each Spending Report line keeps a note for the period it explains
 - Why: The Spec lists an optional free-text Note on the Spending Report, and the user picked one note per line and period, saved by one button
 - Serves: F30
+
+## Intent I26: The user reads the real amount behind each bar of a month chart
+- Why: The charts show millions on a rounded axis, and the user wants the real number
+- Serves: R110

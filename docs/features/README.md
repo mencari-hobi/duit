@@ -442,6 +442,13 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R40: The assets and liabilities table lists each asset with its latest value and its change from the update before
   - Scenario S82: "Savings account" updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000
   - Scenario S235: With Paid ticks for 2026-10 and 2026-11, "DBT-0001" from S48 reads "DBT-0001 · Car installment" at 176.800.000 for 2026/11, with a change of −5.200.000 from 2026/10
+- Rule R110: Hovering a month on a desktop month chart shows a tooltip with the month and the real IDR amount of each series in it
+  - Scenario S285: Hovering 2026/11 on Net worth growth, with equity of 1.550.400.000 and no liabilities, shows "2026/11", "Equity 1.550.400.000", and "Net worth 1.550.400.000" (happy path)
+  - Scenario S286: Hovering 2026/11 on Asset movement by type, with "Cash" of 6.000.000 at 75% of the assets, shows "Cash 6.000.000 · 75%"
+  - Scenario S287: A series worth 0 in the hovered month stays out of the tooltip
+  - Scenario S288: Hovering a month where every series is 0 shows no tooltip
+  - Scenario S289: A net worth of −3.000.000 reads "Net worth −3.000.000" in the tooltip
+  - Scenario S290: Moving the pointer off the month hides the tooltip
 
 ### Feature F15: Dashboard range
 - Rule R41: From and To narrow the dashboard to the reporting months they cover
