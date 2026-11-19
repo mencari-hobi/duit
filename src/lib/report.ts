@@ -22,9 +22,9 @@ export const shown = (line: Line, n: number | null) => (line.percent ? percent(n
 export const notes = (currency: string) => [
 	['Amounts', `are in millions of ${currency}, the default currency. An entry in another currency stays out of every total.`],
 	['Total saving', 'is the change in assets over the month, split by asset class, with market gains and losses. An asset funded by debt stays out.'],
-	['Remaining', 'is income − saving − expenses.'],
+	['Remaining', 'is income − debt payments − saving − expenses.'],
 	['Liquid assets', 'are the Cash assets.'],
-	['Installments', 'are the expense categories Mortgage, Car Installment, Debt Payment, and Other Installment. Non-mortgage installments leave out Mortgage.'],
+	['Debt payments', 'are the installments ticked Paid on the Debt payment tab, in the month of their paid date. Non-mortgage debt payments leave out Mortgage.'],
 	['Fixed expenses', 'are the expenses of both "Fixed" expense types.'],
 	['Acquisition value', 'is the cost entered per asset. An asset without one counts its market value as cost, so its gain is 0.'],
 	['Liabilities', 'need a term, short or long. Set it with Edit on the Records page.']
