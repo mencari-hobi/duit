@@ -166,15 +166,6 @@ test('a debt lists in records on its start date at its debt amount', { meta: { s
 	expect(label(record)).toBe('DBT-0001 · Car installment · 36 × 5.200.000 monthly');
 });
 
-test('debt payment reads DBT-0001 for the current reporting month', { meta: { scenario: 'S225' } }, () => {
-	startDay25();
-	borrow(alice);
-
-	expect(debtTable(db, alice, '2026-11')!.rows).toEqual([
-		{ code: 'DBT-0001', category: 'Car installment', total: 187200000, due: 5200000, paid: false, remaining: 98800000 }
-	]);
-});
-
 test('a weekly debt from the first day of the window is due five times in it', { meta: { scenario: 'S226' } }, () => {
 	startDay25();
 	borrow(alice, { paymentType: 'Weekly', tenor: '12', start: '2026/10/25', end: '2027/09/19', installment: '1.000.000' });
@@ -191,20 +182,6 @@ test('a finished debt and a debt starting later stay out of the table', { meta: 
 	expect(debtTable(db, alice, '2026-11')!.rows.map((row) => row.code)).toEqual(['DBT-0003']);
 });
 
-test('the total row sums the amounts and counts the unticked rows', { meta: { scenario: 'S228' } }, () => {
-	startDay25();
-	borrow(alice);
-	borrow(alice, { category: 'Mortgage', amount: '900.000.000', tenor: '180', end: '2040/05/25', installment: '6.000.000' });
-	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on' }, '2026-11-18');
-
-	expect(debtTable(db, alice, '2026-11')!.total).toEqual({
-		total: 187200000 + 1080000000,
-		due: 11200000,
-		unpaid: 1,
-		remaining: 98800000 + 1080000000 - 17 * 6000000
-	});
-});
-
 test('reporting month lists each month from the earliest start to the current one, newest first', { meta: { scenario: 'S229' } }, () => {
 	startDay25();
 	borrow(alice, { start: '2026/08/25', end: '2029/07/25' });
@@ -214,16 +191,6 @@ test('reporting month lists each month from the earliest start to the current on
 		{ value: '2026-10', label: '2026-10 (25 Sep – 24 Oct 2026)' },
 		{ value: '2026-09', label: '2026-09 (25 Aug – 24 Sep 2026)' }
 	]);
-});
-
-test('an earlier month shows its own due amounts', () => {
-	startDay25();
-	borrow(alice, { start: '2026/10/25', end: '2029/09/25' });
-
-	expect(debtTable(db, alice, '2026-10')!.rows).toEqual([]);
-	expect(debtTable(db, alice, '2026-11')!.rows[0]).toEqual(
-		expect.objectContaining({ due: 5200000, remaining: 187200000 - 5200000 })
-	);
 });
 
 test('ticking DBT-0001 for 2026-11 stores its payment paid today', () => {
@@ -255,15 +222,6 @@ test('unticking DBT-0001 removes its payment for 2026-11', { meta: { scenario: '
 	expect(payments()).toEqual([]);
 });
 
-test('ticking DBT-0001 leaves its remaining debt unchanged', { meta: { scenario: 'S232' } }, () => {
-	startDay25();
-	borrow(alice);
-
-	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on' }, '2026-11-18');
-
-	expect(debtTable(db, alice, '2026-11')!.rows[0].remaining).toBe(98800000);
-});
-
 test('a tick for a debt of another account stores nothing', () => {
 	borrow(bob);
 
@@ -277,4 +235,58 @@ test('an account without debts has no debt table', () => {
 	expect(reportingMonths(db, alice, '2026-11-18')).toEqual([
 		{ value: '2026-11', label: '2026-11 (1 Nov – 30 Nov 2026) · current' }
 	]);
+});
+
+const tick = (month: string) => savePayments(db, alice, month, { 'paid-DBT-0001': 'on' }, '2026-11-18');
+
+test('debt payment reads DBT-0001 without a paid tick for the current reporting month', { meta: { scenario: 'S225' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	expect(debtTable(db, alice, '2026-11')!.rows).toEqual([
+		{ code: 'DBT-0001', category: 'Car installment', total: 187200000, due: 5200000, paid: false, remaining: 187200000, overdue: 83200000 }
+	]);
+});
+
+test('the total row sums the amounts, the remaining debts, and the overdue amounts, and counts the unticked rows', { meta: { scenario: 'S228' } }, () => {
+	startDay25();
+	borrow(alice);
+	borrow(alice, { category: 'Mortgage', amount: '900.000.000', tenor: '180', end: '2040/05/25', installment: '6.000.000' });
+	tick('2026-11');
+
+	expect(debtTable(db, alice, '2026-11')!.total).toEqual({
+		total: 187200000 + 1080000000,
+		due: 11200000,
+		unpaid: 1,
+		remaining: 182000000 + 1080000000,
+		overdue: 83200000 + 16 * 6000000
+	});
+});
+
+test('ticking DBT-0001 for 2026-11 lowers its remaining debt for 2026-11 by the due amount', { meta: { scenario: 'S232' } }, () => {
+	startDay25();
+	borrow(alice);
+	const before = debtTable(db, alice, '2026-11')!.rows[0].remaining;
+
+	tick('2026-11');
+
+	expect([before, debtTable(db, alice, '2026-11')!.rows[0].remaining]).toEqual([187200000, 182000000]);
+});
+
+test('a paid tick for 2026-11 leaves the remaining debt for 2026-10 unchanged', { meta: { scenario: 'S283' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	tick('2026-11');
+
+	expect(debtTable(db, alice, '2026-10')!.rows[0].remaining).toBe(187200000);
+});
+
+test('with only 2026-10 ticked, DBT-0001 reads 78.000.000 overdue for 2026-11', { meta: { scenario: 'S284' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	tick('2026-10');
+
+	expect(debtTable(db, alice, '2026-11')!.rows[0].overdue).toBe(78000000);
 });

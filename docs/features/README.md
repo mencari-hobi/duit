@@ -182,15 +182,19 @@ Every feature of the product, grouped by the surface a user reaches it on.
 
 ### Feature F27: Debt payment
 - Rule R89: Debt payment lists each debt running in the reporting month
-  - Scenario S225: With the reporting start day 25, "DBT-0001" from S48 reads "Car installment", "187.200.000", "5.200.000", and "98.800.000" for "2026-11 (25 Oct – 24 Nov 2026) · current" (happy path)
+  - Scenario S225: With the reporting start day 25 and no Paid tick, "DBT-0001" from S48 reads "Car installment", "187.200.000", a due amount of "5.200.000", a remaining debt of "187.200.000", and "83.200.000" overdue for "2026-11 (25 Oct – 24 Nov 2026) · current" (happy path)
   - Scenario S226: A "Weekly" debt of 1.000.000 from 2026/10/25 reads a due amount of "5.000.000" for 2026-11 with the reporting start day 25
   - Scenario S227: A debt whose last payment falls before the month, and a debt whose start payment falls after it, stay out of the table
-  - Scenario S228: The total row sums the debt & interest amounts, the due amounts, and the remaining debts, and reads "<n> unpaid" for the unticked rows
+  - Scenario S228: The total row sums the debt & interest amounts, the due amounts, the remaining debts, and the overdue amounts, and reads "<n> unpaid" for the unticked rows
   - Scenario S229: "Reporting month" lists each month from the earliest start payment to the current month, newest first, and choosing an earlier month shows that month's due amounts
 - Rule R90: "Save payments" stores the Paid tick of each debt for the chosen month, dated the day of the save
   - Scenario S230: Ticking "DBT-0001" for 2026-11 and saving stores a payment of "DBT-0001" for 2026-11 paid today, shows "Saved ✓", and keeps the box ticked
   - Scenario S231: Unticking "DBT-0001" and saving removes its payment for 2026-11
-  - Scenario S232: Ticking "DBT-0001" leaves its remaining debt at "98.800.000"
+- Rule R108: Remaining debt is the debt & interest amount less the due amount of each month ticked Paid, up to the chosen month
+  - Scenario S232: Ticking "DBT-0001" for 2026-11 lowers its remaining debt for 2026-11 from "187.200.000" to "182.000.000"
+  - Scenario S283: A Paid tick for 2026-11 leaves the remaining debt for 2026-10 at "187.200.000"
+- Rule R109: "Overdue" sums the due amounts of the months before the chosen month that are not ticked Paid
+  - Scenario S284: With only 2026-10 ticked, "DBT-0001" from S48 reads "78.000.000" overdue for 2026-11
 - Rule R91: An account without debts reads "No debts yet. Save an additional debt first."
   - Scenario S233: A new account's Debt payment reads "No debts yet. Save an additional debt first."
 
@@ -356,7 +360,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S207: "Term Deposit", "Foreign Exchanges", and "Mutual Fund" assets of 1.000.000 each read "Liquid assets" 3,00
   - Scenario S112: An asset worth 12.000.000 with an acquisition value of 10.000.000 reads "Acquisition value" 10,00, "Capital gain (market − acquisition)" 2,00, and "Capital gain % of acquisition value" 20.0%
   - Scenario S113: Liabilities of 1.000.000 "Short term" and 2.000.000 "Long term" against assets of 8.000.000 read "Liabilities" 3,00, split by term, and "Net Worth (assets − liabilities)" 5,00
-  - Scenario S236: A debt over 36 months adds its remaining debt to "Long term", and a debt over 12 months or less adds it to "Short term"
+  - Scenario S236: A debt over 36 months adds its remaining debt after its Paid ticks to "Long term", and a debt over 12 months or less adds it to "Short term"
 - Rule R50: The ratios section shows nine ratios of the month
   - Scenario S114: Income of 10.000.000, fixed expenses of 3.000.000, saving of 2.000.000, a "Cash" asset of 6.000.000, a "Property" asset of 2.000.000, and a liability of 2.000.000 read saving rate 20.0%, fixed expense ÷ income 30.0%, debt ÷ total assets 25.0%, liquidity ratio 75.0%, liquid assets ÷ net worth 100.0%, non-cash assets ÷ net worth 33.3%, and net worth ÷ total assets 75.0%
   - Scenario S116: A month without income reads "–" for every ratio divided by income
@@ -411,7 +415,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S131: A salary of 10.000.000 and a sale of 150.000.000 in 2026/11 read "Income" 10.000.000 under "Cash flow · 2026/11" and on the income vs expense chart
 - Rule R31: Net worth sums each asset's latest value, minus each old liability's latest value and each debt's remaining debt, up to the month
   - Scenario S70: With "Savings account" updated from 10.000.000 to 12.000.000, and "Mortgage loan" at 3.000.000, the "Net worth" card reads 9.000.000
-  - Scenario S234: With the reporting start day 25, an asset of 120.000.000 and "DBT-0001" from S48 read 21.200.000 on the "Net worth" card for 2026/11
+  - Scenario S234: With the reporting start day 25 and Paid ticks for 2026-10 and 2026-11, an asset of 120.000.000 and "DBT-0001" from S48 read −56.800.000 on the "Net worth" card for 2026/11
 - Rule R32: Own-funded assets leave out the assets funded by "Debt"
   - Scenario S71: With a "Cash" asset of 10.000.000 funded by "Salary" and a car of 5.000.000 funded by "Debt", the "Own-funded assets" card reads 10.000.000 and "67% of assets · debt-funded 5.000.000"
   - Scenario S72: Own-funded assets growing from 10.000.000 in 2026/10 to 12.500.000 in 2026/11 read 2.500.000 on the "Saved into assets · 2026/11" card
@@ -435,7 +439,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S136: A "Cash" asset of 6.000.000 and a "Gold" asset of 2.000.000 in 2026/11 stack as 75% and 25%
 - Rule R40: The assets and liabilities table lists each asset with its latest value and its change from the update before
   - Scenario S82: "Savings account" updated from 10.000.000 to 12.000.000 reads 12.000.000 with a change of 2.000.000
-  - Scenario S235: "DBT-0001" from S48 reads "DBT-0001 · Car installment" at 98.800.000 for 2026/11, with a change of −5.200.000 from 2026/10
+  - Scenario S235: With Paid ticks for 2026-10 and 2026-11, "DBT-0001" from S48 reads "DBT-0001 · Car installment" at 176.800.000 for 2026/11, with a change of −5.200.000 from 2026/10
 
 ### Feature F15: Dashboard range
 - Rule R41: From and To narrow the dashboard to the reporting months they cover
