@@ -5,13 +5,17 @@
 	import { group } from '#lib/amount.ts';
 	import { slashDate } from '#lib/date.ts';
 	import { ratioPercent } from '#lib/plan.ts';
+	import { noteKey } from '#lib/spending.ts';
+	import { page } from '$app/state';
 	import type { SpendingReport } from '#lib/server/spending.ts';
 
 	type Chosen = { period: string; date: string; from: string; to: string; start?: string; end?: string; error?: string };
 
-	type Props = { report: SpendingReport | null; chosen: Chosen; periods: { value: string; label: string }[] };
+	type Props = { report: SpendingReport | null; chosen: Chosen; periods: { value: string; label: string }[]; saved?: boolean };
 
-	let { report, chosen, periods }: Props = $props();
+	let { report, chosen, periods, saved }: Props = $props();
+
+	const notesAction = $derived(`${page.url.search ? `${page.url.search}&` : '?'}/notes`);
 
 	let period = $derived(chosen.period);
 	let date = $derived(slashDate(chosen.date));
@@ -30,13 +34,22 @@
 	const indent = ['pl-4', 'pl-7', 'pl-10'];
 </script>
 
-{#snippet line(row: { label: string; actual: number; budget: number; variance: number; share: number | null; good: boolean | null }, depth: number, strong: boolean)}
+{#snippet line(row: { label: string; actual: number; budget: number; variance: number; share: number | null; good: boolean | null }, depth: number, strong: boolean, key: string)}
 	<tr class={['border-b last:border-b-0', strong && 'bg-muted font-semibold']}>
 		<th scope="row" class={['py-2 pr-2 text-left leading-snug', strong ? 'font-semibold' : 'font-normal', indent[depth]]}>{row.label}</th>
 		<td class={cell}>{amount(row.actual)}</td>
 		<td class={cell}>{amount(row.budget)}</td>
 		<td class={[cell, tone(row.good)]}>{signed(row.variance)}</td>
-		<td class={[cell, 'pr-4', tone(row.good)]}>{percent(row.share)}</td>
+		<td class={[cell, tone(row.good)]}>{percent(row.share)}</td>
+		<td class="py-1 pr-4 pl-2.5">
+			<input
+				name="note:{key}"
+				aria-label="Note, {key}"
+				value={report?.notes[key] ?? ''}
+				autocomplete="off"
+				class="h-9 w-full min-w-40 rounded-md border border-input bg-transparent px-2 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+			/>
+		</td>
 	</tr>
 {/snippet}
 
@@ -64,6 +77,9 @@
 	<p class="text-muted-foreground">
 		<span class="tabular-nums">{slashDate(report.start)} – {slashDate(report.end)}</span>, in {report.currency}
 	</p>
+	<form method="POST" action={notesAction} class="flex flex-col gap-4">
+	<input type="hidden" name="start" value={report.start} />
+	<input type="hidden" name="end" value={report.end} />
 	<section aria-labelledby="spending-title" class="overflow-hidden rounded-xl border bg-card">
 		<h2 id="spending-title" class="border-b px-4 py-3 text-lg">Actual against budget</h2>
 		<div class="overflow-x-auto">
@@ -74,30 +90,38 @@
 						<th scope="col" class={head}>Actual</th>
 						<th scope="col" class={head}>Budget</th>
 						<th scope="col" class={head}>Variance</th>
-						<th scope="col" class={[head, 'pr-4']}>%</th>
+						<th scope="col" class={head}>%</th>
+						<th scope="col" class={[head, 'pr-4 text-left']}>Note</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each report.sections as section (section.name)}
-						{@render line(section, 0, true)}
+						{@render line(section, 0, true, noteKey(section.name))}
 						{#if section.types.length}
 							{#each section.types as type (type.name)}
-								{@render line(type, 1, false)}
+								{@render line(type, 1, false, noteKey(section.name, type.name))}
 								{#each type.rows as row (row.label)}
-									{@render line(row, 2, false)}
+									{@render line(row, 2, false, noteKey(section.name, type.name, row.label))}
 								{/each}
 							{/each}
 						{:else}
 							{#each section.rows as row (row.label)}
-								{@render line(row, 1, false)}
+								{@render line(row, 1, false, noteKey(section.name, row.label))}
 							{/each}
 						{/if}
 					{/each}
-					{@render line(report.free, 0, true)}
+					{@render line(report.free, 0, true, noteKey(report.free.label))}
 				</tbody>
 			</table>
 		</div>
 	</section>
+	<div class="flex flex-col gap-2 md:flex-row-reverse md:items-center md:justify-start md:gap-4">
+		<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">Save notes</Button>
+		{#if saved}
+			<p id="message" role="status" class="font-semibold text-in">Saved ✓</p>
+		{/if}
+	</div>
+	</form>
 	<section aria-labelledby="ratios-title" class="overflow-hidden rounded-xl border bg-card">
 		<h2 id="ratios-title" class="border-b px-4 py-3 text-lg">Ratios</h2>
 		<div class="overflow-x-auto">

@@ -106,6 +106,15 @@ export function openDatabase(path: string): Db {
 			paid_date TEXT NOT NULL,
 			UNIQUE (debt_id, month)
 		);
+		CREATE TABLE IF NOT EXISTS spending_notes (
+			id INTEGER PRIMARY KEY,
+			user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			start TEXT NOT NULL,
+			end TEXT NOT NULL,
+			line TEXT NOT NULL,
+			note TEXT NOT NULL,
+			UNIQUE (user_id, start, end, line)
+		);
 	`);
 	const columns = db.prepare('PRAGMA table_info(diary_assets)').all() as { name: string }[];
 	const added = {

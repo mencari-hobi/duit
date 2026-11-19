@@ -4,7 +4,7 @@
 	import { notes, shown } from '#lib/report.ts';
 	import SpendingReport from '#lib/SpendingReport.svelte';
 
-	let { data } = $props();
+	let { data, form } = $props();
 	const report = $derived(data.view === 'monthly' ? data.report : data.spending);
 	const views = [
 		['spending', 'Spending Report', '/snapshot'],
@@ -61,7 +61,7 @@
 		<Button href="/diary" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
 	</div>
 {:else if data.view === 'spending'}
-	<SpendingReport report={data.spending} chosen={data.chosen} periods={data.periods} />
+	<SpendingReport report={data.spending} chosen={data.chosen} periods={data.periods} saved={form?.saved} />
 {:else if data.report}
 	{@const report = data.report}
 	{#each report.sections as section (section.id)}

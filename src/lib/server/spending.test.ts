@@ -6,7 +6,8 @@ import { saveDebt, savePayments } from './debts';
 import { addEntry } from './entries';
 import { deletePlanItem, savePlanItem } from './plan';
 import { saveSettings } from './settings';
-import { periodOf, spendingReport } from './spending';
+import { noteKey } from '#lib/spending.ts';
+import { periodOf, saveNotes, spendingReport } from './spending';
 
 let db: Db;
 let alice: number;
@@ -232,4 +233,51 @@ test('a dream whose months passed before the period, or that starts after it, ad
 	plan({ tab: 'saving', dream: 'House', amount: '12.000.000', months: '12', start: '2026/11/30' });
 
 	expect(report().sections.find((section) => section.name === 'Saving')?.rows.map(({ label, budget }) => [label, budget])).toEqual([['House', 1000000]]);
+});
+
+const eatingOut = (date: string) =>
+	diary({ type: 'expense', date, amount: '400.000', category: 'eating out', expenseType: 'Non-fixed - Non-essential', owner: 'Personal' });
+
+const eatingOutKey = noteKey('Expense', 'Non-fixed - Non-essential', 'Eating Out');
+
+const noteOn = (key: string, note: string, start: string, end: string) => saveNotes(db, alice, start, end, { [`note:${key}`]: note });
+
+const notes = (start: string, end: string) => report(start, end).notes;
+
+test('a note saved for a period stays off another period and shows on the same dates', { meta: { scenario: 'S279' } }, () => {
+	eatingOut('2026/10/20');
+	noteOn(eatingOutKey, 'Birthday party', '2026-09-25', '2026-10-24');
+
+	expect(notes('2026-10-18', '2026-10-24')).toEqual({});
+	expect(notes('2026-09-25', '2026-10-24')).toEqual({ [eatingOutKey]: 'Birthday party' });
+});
+
+test('clearing a saved note, then saving the notes, removes it', { meta: { scenario: 'S280' } }, () => {
+	eatingOut('2026/11/05');
+	noteOn(eatingOutKey, 'Birthday party', '2026-11-01', '2026-11-30');
+
+	noteOn(eatingOutKey, '  ', '2026-11-01', '2026-11-30');
+
+	expect(notes('2026-11-01', '2026-11-30')).toEqual({});
+	expect(db.prepare('SELECT * FROM spending_notes').all()).toEqual([]);
+});
+
+test('a note on other under income stays off other under an expense type', { meta: { scenario: 'S281' } }, () => {
+	diary({ type: 'income', date: '2026/11/05', amount: '1.000.000', category: 'other' });
+	diary({ type: 'expense', date: '2026/11/05', amount: '200.000', category: 'other', expenseType: 'Non-fixed - Non-essential', owner: 'Personal' });
+
+	noteOn(noteKey('Income', 'Other'), 'Garage sale', '2026-11-01', '2026-11-30');
+
+	expect(notes('2026-11-01', '2026-11-30')[noteKey('Income', 'Other')]).toBe('Garage sale');
+	expect(notes('2026-11-01', '2026-11-30')[noteKey('Expense', 'Non-fixed - Non-essential', 'Other')]).toBeUndefined();
+});
+
+test("another account's report over the same dates shows none of the notes", { meta: { scenario: 'S282' } }, () => {
+	eatingOut('2026/11/05');
+	noteOn(eatingOutKey, 'Birthday party', '2026-11-01', '2026-11-30');
+	const bob = register(db, 'bob', 'password1');
+	if (!('user' in bob)) throw new Error(bob.message);
+	addEntry(db, bob.user.id, { type: 'expense', date: '2026/11/06', amount: '300.000', currency: 'IDR', category: 'eating out', expenseType: 'Non-fixed - Non-essential', owner: 'Personal', note: '' });
+
+	expect(spendingReport(db, bob.user.id, '2026-11-01', '2026-11-30')!.notes).toEqual({});
 });
