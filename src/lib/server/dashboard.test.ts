@@ -4,7 +4,7 @@ import { loadDashboard } from './dashboard';
 import { openDatabase, type Db } from './db';
 import { addEntry } from './entries';
 import { recordHolding } from './holdings-fixture';
-import { saveDebt } from './debts';
+import { saveDebt, savePayments } from './debts';
 import { saveSettings } from './settings';
 
 let db: Db;
@@ -325,31 +325,37 @@ const carDebt = {
 	installment: '5.200.000'
 };
 
+const payCarDebt = (...months: string[]) => {
+	for (const month of months) savePayments(db, alice, month, { 'paid-DBT-0001': 'on' }, '2026-11-18');
+};
+
 test(
-	'an asset of 120.000.000 and DBT-0001 read a net worth of 21.200.000 for 2026/11',
+	'with paid ticks for 2026-10 and 2026-11, an asset of 120.000.000 and DBT-0001 read a net worth of −56.800.000 for 2026/11',
 	{ meta: { scenario: 'S234' } },
 	() => {
 		saveSettings(db, alice, { currency: 'IDR', startDay: '25' });
 		asset('2026/11/01', 'Savings account', '120.000.000');
 		saveDebt(db, alice, carDebt);
+		payCarDebt('2026-10', '2026-11');
 
 		const dashboard = loadDashboard(db, alice, '', '', '2026-11-18');
 
-		expect(dashboard.cards).toMatchObject({ month: '2026/11', netWorth: 21200000 });
+		expect(dashboard.cards).toMatchObject({ month: '2026/11', netWorth: -56800000 });
 	}
 );
 
 test(
-	'DBT-0001 reads its remaining debt for 2026/11 with the drop from 2026/10',
+	'with paid ticks for 2026-10 and 2026-11, DBT-0001 reads 176.800.000 for 2026/11 with the drop from 2026/10',
 	{ meta: { scenario: 'S235' } },
 	() => {
 		saveSettings(db, alice, { currency: 'IDR', startDay: '25' });
 		saveDebt(db, alice, carDebt);
+		payCarDebt('2026-10', '2026-11');
 
 		const { table } = loadDashboard(db, alice, '', '', '2026-11-18');
 
 		expect(table).toEqual([
-			expect.objectContaining({ code: 'DBT-0001', name: 'Car installment', cls: 'Liability', value: 98800000, change: -5200000 })
+			expect.objectContaining({ code: 'DBT-0001', name: 'Car installment', cls: 'Liability', value: 176800000, change: -5200000 })
 		]);
 	}
 );

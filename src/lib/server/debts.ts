@@ -97,6 +97,20 @@ export function dueIn(debt: DebtRow, month: string, startDay: number) {
 
 const totalOf = (debt: DebtRow) => debt.installment * paymentCount(debt.tenor, debt.payment_type);
 
+const paidMonths = (db: Db, debt: DebtRow) =>
+	new Set((db.prepare('SELECT month FROM diary_debt_payments WHERE debt_id = ?').all(debt.id) as { month: string }[]).map((row) => row.month));
+
+function standing(debt: DebtRow, month: string, startDay: number, paid: Set<string>) {
+	let remaining = totalOf(debt);
+	let overdue = 0;
+	for (let step = monthKey(debt.start, startDay); step <= month; step = monthKey(reportingWindow(step, startDay).end.add({ days: 1 }).toString(), startDay)) {
+		const due = dueIn(debt, step, startDay);
+		if (paid.has(step)) remaining -= due;
+		else if (step < month) overdue += due;
+	}
+	return { remaining, overdue };
+}
+
 export function reportingWindow(month: string, startDay: number) {
 	const [year, number] = month.split('-').map(Number);
 	const first = new CalendarDate(year, number, 1);
@@ -130,7 +144,8 @@ export const currentMonth = (db: Db, userId: number, today: string) => monthKey(
 export function debtTable(db: Db, userId: number, month: string) {
 	const debts = debtRows(db, userId);
 	if (!debts.length) return null;
-	const { start, end } = reportingWindow(month, readSettings(db, userId).startDay);
+	const { startDay } = readSettings(db, userId);
+	const { start, end } = reportingWindow(month, startDay);
 	const [from, to] = [start.toString(), end.toString()];
 	const paid = new Set(
 		(
@@ -145,17 +160,14 @@ export function debtTable(db: Db, userId: number, month: string) {
 	const rows = debts
 		.map((debt) => ({ debt, dates: schedule(debt) }))
 		.filter(({ dates }) => dates.length && dates[0] <= to && dates.at(-1)! >= from)
-		.map(({ debt, dates }) => {
-			const total = totalOf(debt);
-			return {
-				code: debt.code,
-				category: debt.category,
-				total,
-				due: debt.installment * dates.filter((date) => date >= from && date <= to).length,
-				paid: paid.has(debt.id),
-				remaining: total - debt.installment * dates.filter((date) => date <= to).length
-			};
-		});
+		.map(({ debt, dates }) => ({
+			code: debt.code,
+			category: debt.category,
+			total: totalOf(debt),
+			due: debt.installment * dates.filter((date) => date >= from && date <= to).length,
+			paid: paid.has(debt.id),
+			...standing(debt, month, startDay, paidMonths(db, debt))
+		}));
 	const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + pick(row), 0);
 	return {
 		rows,
@@ -163,7 +175,8 @@ export function debtTable(db: Db, userId: number, month: string) {
 			total: sum((row) => row.total),
 			due: sum((row) => row.due),
 			unpaid: rows.filter((row) => !row.paid).length,
-			remaining: sum((row) => row.remaining)
+			remaining: sum((row) => row.remaining),
+			overdue: sum((row) => row.overdue)
 		}
 	};
 }
@@ -187,14 +200,13 @@ export function debtHoldings(db: Db, userId: number, currency: string, startDay:
 	return debtRows(db, userId)
 		.filter((debt) => debt.currency === currency)
 		.flatMap((debt) => {
-			const dates = schedule(debt);
-			const total = totalOf(debt);
+			const paid = paidMonths(db, debt);
 			const rows = [];
 			let month = monthKey(debt.start, startDay);
 			while (month <= current) {
 				const { end } = reportingWindow(month, startDay);
 				const to = end.toString();
-				const value = total - debt.installment * dates.filter((date) => date <= to).length;
+				const { remaining: value } = standing(debt, month, startDay, paid);
 				rows.push({
 					date: to,
 					name: debt.category,
@@ -206,7 +218,7 @@ export function debtHoldings(db: Db, userId: number, currency: string, startDay:
 					acquisition: null,
 					code: debt.code
 				});
-				if (value <= 0 || to >= dates.at(-1)!) break;
+				if (value <= 0) break;
 				month = monthKey(end.add({ days: 1 }).toString(), startDay);
 			}
 			return rows;

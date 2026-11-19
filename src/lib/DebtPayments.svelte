@@ -3,8 +3,8 @@
 	import { Label } from '#lib/components/ui/label/index.js';
 	import { group } from '#lib/amount.ts';
 
-	type Row = { code: string; category: string; total: number; due: number; paid: boolean; remaining: number };
-	type Table = { rows: Row[]; total: { total: number; due: number; unpaid: number; remaining: number } } | null;
+	type Row = { code: string; category: string; total: number; due: number; paid: boolean; remaining: number; overdue: number };
+	type Table = { rows: Row[]; total: { total: number; due: number; unpaid: number; remaining: number; overdue: number } } | null;
 
 	type Props = {
 		table: Table;
@@ -49,7 +49,8 @@
 						<th scope="col" class={[head, 'text-right']}>Debt &amp; interest amount ({currency})</th>
 						<th scope="col" class={[head, 'text-right']}>Due amount ({currency})</th>
 						<th scope="col" class={[head, 'text-center']}>Paid</th>
-						<th scope="col" class={[head, 'pr-4 text-right']}>Remaining debt ({currency})</th>
+						<th scope="col" class={[head, 'text-right']}>Remaining debt ({currency})</th>
+						<th scope="col" class={[head, 'pr-4 text-right']}>Overdue ({currency})</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -68,7 +69,8 @@
 									class="size-5 accent-primary"
 								/>
 							</td>
-							<td class={[amount, 'pr-4']}>{shown(row.remaining)}</td>
+							<td class={amount}>{shown(row.remaining)}</td>
+							<td class={[amount, 'pr-4', row.overdue > 0 && 'text-out']}>{shown(row.overdue)}</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -78,14 +80,15 @@
 						<td class={amount}>{shown(table.total.total)}</td>
 						<td class={amount}>{shown(table.total.due)}</td>
 						<td class="px-2 py-2 text-center whitespace-nowrap">{table.total.unpaid} unpaid</td>
-						<td class={[amount, 'pr-4']}>{shown(table.total.remaining)}</td>
+						<td class={amount}>{shown(table.total.remaining)}</td>
+						<td class={[amount, 'pr-4', table.total.overdue > 0 && 'text-out']}>{shown(table.total.overdue)}</td>
 					</tr>
 				</tfoot>
 			</table>
 		</div>
 		<p class="text-sm text-muted-foreground">
 			Due amount = installments falling in the selected reporting month. Remaining debt = Debt &amp; interest amount −
-			cumulative due up to this month. Ticking Paid records the payment status only.
+			the due amounts ticked Paid up to this month. Overdue = due amounts of earlier months not ticked Paid.
 		</p>
 		<div class="flex flex-col gap-2 md:flex-row-reverse md:items-center md:justify-start md:gap-4">
 			<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">Save payments</Button>
