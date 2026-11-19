@@ -202,10 +202,12 @@ export function spendingReport(db: Db, userId: number, start: string, end: strin
 		const budget = of('budget');
 		return { name, actual, budget, bps: actual === null || budget === null ? null : Math.round((actual - budget) * 10000) };
 	};
+	const notes = all('SELECT line, note FROM spending_notes WHERE user_id = ? AND start = ? AND end = ?', start, end) as { line: string; note: string }[];
 	return {
 		currency,
 		start,
 		end,
+		notes: Object.fromEntries(notes.map((row) => [row.line, row.note])) as Record<string, string>,
 		sections,
 		free,
 		ratios: [
@@ -218,3 +220,19 @@ export function spendingReport(db: Db, userId: number, start: string, end: strin
 }
 
 export type SpendingReport = NonNullable<ReturnType<typeof spendingReport>>;
+
+export function saveNotes(db: Db, userId: number, start: string, end: string, fields: Record<string, string>) {
+	const remove = db.prepare('DELETE FROM spending_notes WHERE user_id = ? AND start = ? AND end = ? AND line = ?');
+	const keep = db.prepare(
+		`INSERT INTO spending_notes (user_id, start, end, line, note) VALUES (?, ?, ?, ?, ?)
+		ON CONFLICT (user_id, start, end, line) DO UPDATE SET note = excluded.note`
+	);
+	db.transaction(() => {
+		for (const [name, value] of Object.entries(fields)) {
+			if (!name.startsWith('note:')) continue;
+			const note = value.trim();
+			if (note) keep.run(userId, start, end, name.slice(5), note);
+			else remove.run(userId, start, end, name.slice(5));
+		}
+	})();
+}

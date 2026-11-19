@@ -83,7 +83,6 @@ Every intent behind the work of the project, in the order the definitions record
 
 ## Intent I20: The Spending Report compares a chosen period of the Diary with the Plan's budget
 - Why: The Spec leaves "Plan vs actual" open, and the Spending Report answers it with a prorated budget, a variance, and the Plan's ratios
-- Not: notes on report rows, which wait for a later round
 - Serves: F28, F29
 
 ## Intent I21: Saving matches purchases to Plan dreams through an optional link
@@ -97,3 +96,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I23: A Plan dream counts in the budget only while the user saves for it
 - Why: A dream counted forever, even after its months passed, so the budget read a saving the user no longer plans
 - Serves: R103, R104, R105, S152, S183, S266, S271
+
+## Intent I25: Each Spending Report line keeps a note for the period it explains
+- Why: The Spec lists an optional free-text Note on the Spending Report, and the user picked one note per line and period, saved by one button
+- Serves: F30

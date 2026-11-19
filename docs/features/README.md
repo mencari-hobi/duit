@@ -324,6 +324,14 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S254: An actual saving ratio of 10.0% against a budget of 20.0% reads "−1.000 bps"
   - Scenario S255: A period without income reads "–" for each actual ratio
 
+### Feature F30: Spending Report notes
+- Rule R107: "Save notes" stores the note of each report line for the dates the report covers
+  - Scenario S278: Typing "Birthday party" as the note of "Eating Out" on "Last month", then pressing "Save notes", shows "Saved ✓", and the period reopens with the note (happy path)
+  - Scenario S279: A note saved for 2026/09/25 – 2026/10/24 stays off "Last 7 days", and shows on "Between" those dates
+  - Scenario S280: Clearing a saved note, then pressing "Save notes", removes it
+  - Scenario S281: A note on "Other" under "Income" stays off "Other" under an expense type
+  - Scenario S282: Another account's report over the same dates shows no notes
+
 ### Feature F19: Monthly report
 - Rule R47: The report compares the last three reporting months, oldest first
   - Scenario S105: Entries from 2026/08 to 2026/11 give the columns "2026/09", "2026/10", and "2026/11" (happy path)
