@@ -6,7 +6,7 @@ import type { Db } from './db';
 import { debtHoldings, dueIn, todayIso, type DebtRow } from './debts';
 import { readSettings } from './settings';
 
-type Flow = { kind: 'income' | 'expense' | 'debt'; date: string; amount: number; category: string; expenseType: string | null };
+type Flow = { kind: 'income' | 'expense' | 'debt' | 'gain'; date: string; amount: number; category: string; expenseType: string | null };
 
 type Holding = { date: string; name: string; class: string; value: number; source: string | null; term: string | null; acquisition: number | null; code: string | null };
 
@@ -28,7 +28,7 @@ function nextMonth(month: string) {
 
 function ownFunded(holdings: Holding[]) {
 	const bag: Bag = {};
-	for (const row of holdings) if (row.source !== 'Debt') add(bag, row.class, row.value);
+	for (const row of holdings) if (row.source !== 'Debt') add(bag, row.class, row.class === 'Cash' ? row.value : (row.acquisition ?? row.value));
 	return bag;
 }
 
@@ -38,7 +38,12 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 	const owed: Bag = {};
 	let fixed = 0;
 	let sales = 0;
+	let gains = 0;
 	for (const row of flows.filter((row) => row.month === month)) {
+		if (row.kind === 'gain') {
+			gains += row.amount;
+			continue;
+		}
 		if (row.kind === 'debt') {
 			add(owed, row.category, row.amount);
 			continue;
@@ -70,13 +75,14 @@ function monthFigures(flows: Monthly<Flow>[], updates: Monthly<Holding>[], month
 			add(cost, row.class, row.acquisition ?? row.value);
 		}
 	}
-	const incomeTotal = total(income);
+	const incomeTotal = total(income) + gains;
 	const expenseTotal = Object.values(expense).reduce((sum, bag) => sum + total(bag), 0);
 	const assetTotal = total(assets);
 	const debtTotal = total(debt);
 	return {
 		income,
 		sales,
+		gains,
 		expense,
 		saving,
 		assets,
@@ -117,6 +123,20 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 					.all(userId, currency) as (DebtRow & { due: string; paid_date: string })[]
 			).map((paid) => ({ kind: 'debt', date: paid.paid_date, amount: dueIn(paid, paid.due, startDay), category: paid.category, expenseType: null }))
 		)
+		.concat(
+			db
+				.prepare(
+					`SELECT 'gain' AS kind, sold.date, sold.amount - (
+						SELECT CASE WHEN held.class = 'Cash' THEN held.value ELSE coalesce(held.acquisition, held.value) END
+						FROM diary_assets AS held
+						WHERE held.user_id = gone.user_id AND held.code = gone.code AND held.id <> gone.id AND held.date <= gone.date
+						ORDER BY held.date DESC, held.id DESC LIMIT 1
+					) AS amount, '' AS category, NULL AS expenseType
+					FROM diary_entries AS sold JOIN diary_assets AS gone ON gone.sale_id = sold.id
+					WHERE sold.user_id = ? AND sold.currency = ?`
+				)
+				.all(userId, currency) as Flow[]
+		)
 		.map((row) => ({ ...row, month: monthOf(row.date, startDay) }));
 	const updates = (
 		db
@@ -154,6 +174,7 @@ export function loadReport(db: Db, userId: number, today = todayIso()): Report |
 	const flow = [
 		sum('Total Income', (c) => c.incomeTotal),
 		...keys((c) => c.income).map((name) => line(capitalize(name), 1, (c) => c.income[name] ?? 0)),
+		...(columns.some((c) => c.gains) ? [line('Realized gain on asset sales', 1, (c) => c.gains)] : []),
 		...(columns.some((c) => c.sales) ? [line('Sales of Asset (memo, not counted as income)', 1, (c) => c.sales)] : []),
 		sum('Total Debt payment', (c) => c.owedTotal),
 		...keys((c) => c.owed).map((name) => line(name, 1, (c) => c.owed[name] ?? 0)),

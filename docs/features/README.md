@@ -350,6 +350,11 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S108: An expense of 3.000.000 under "mortgage" as "Fixed - Essential" reads "Total Expense" 3,00, with "Fixed - Essential" 3,00 and "Mortgage" 3,00 under it
   - Scenario S109: A "Cash" asset funded by "Salary" growing from 10.000.000 to 12.000.000 reads "Total Saving" 2,00, with "Cash" 2,00 under it, and an asset funded by "Debt" stays out of saving
   - Scenario S110: Income of 10.000.000, debt payments of 2.000.000, saving of 2.000.000, and expenses of 4.000.000 read "Remaining Amount (income − debt payment − saving − expense)" 2,00
+- Rule R111: "Total Saving" counts the change in acquisition value of each non-"Cash" asset class, so a market move on an unsold asset stays out of it and "Remaining Amount"
+  - Scenario S291: A "Gold" asset funded by "Bonus", bought for 62.500.000 in 2026/10 and updated to 70.000.000 in 2026/11, reads "Total Saving" "–" in the column "2026/11" (happy path)
+- Rule R112: A sale's realized gain, its proceeds minus the asset's acquisition value, counts in "Total Income" in the sale month
+  - Scenario S292: A salary of 8.000.000 and the sale for 70.000.000 in 2026/11 of a "Gold" asset bought for 62.500.000 read "Total Income" 15,50, with "Realized gain on asset sales" 7,50 under it (happy path)
+  - Scenario S293: Selling that asset for 55.000.000 reads "Realized gain on asset sales" −7,50 and "Total Income" 0,50
 - Rule R101: The income and expense section totals the installments ticked Paid in each reporting month, by debt category
   - Scenario S261: A "Car installment" debt of 5.200.000 a month ticked Paid on 2026/11/18 reads "Total Debt payment" 5,20 in the column "2026/11", with "Car installment" 5,20 under it
   - Scenario S262: A tick for the reporting month 2026-10 saved on 2026/11/18 counts in "2026/11" and leaves "Total Debt payment" of "2026/10" at "–"

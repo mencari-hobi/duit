@@ -21,7 +21,8 @@ export const shown = (line: Line, n: number | null) => (line.percent ? percent(n
 
 export const notes = (currency: string) => [
 	['Amounts', `are in millions of ${currency}, the default currency. An entry in another currency stays out of every total.`],
-	['Total saving', 'is the change in assets over the month, split by asset class, with market gains and losses. An asset funded by debt stays out.'],
+	['Total saving', 'is the change in assets over the month at acquisition value, split by asset class, so a market move on an asset you still hold stays out. Cash counts at its value. An asset funded by debt stays out.'],
+	['Realized gain', 'is the sale price minus the acquisition value of the sold asset, and counts as income in the month of the sale.'],
 	['Remaining', 'is income − debt payments − saving − expenses.'],
 	['Liquid assets', 'are the Cash assets.'],
 	['Debt payments', 'are the installments ticked Paid on the Debt payment tab, in the month of their paid date. Non-mortgage debt payments leave out Mortgage.'],

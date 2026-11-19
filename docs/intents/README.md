@@ -107,3 +107,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I26: The user reads the real amount behind each bar of a month chart
 - Why: The charts show millions on a rounded axis, and the user wants the real number
 - Serves: R110
+
+## Intent I27: The Monthly report's "Remaining Amount" tracks the cash the user can spend right now
+- Why: The user reads the cell as spendable cash, so an unrealized move on gold misleads them, while a realized gain is income
+- Serves: R111, R112
