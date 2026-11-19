@@ -312,6 +312,43 @@ test('three reporting months without a sale leave out the memo line', { meta: { 
 	expect(labels).not.toContain(memo);
 });
 
+test(
+	'a gold asset bought for 62.500.000 and updated to 70.000.000 a month later reads no saving in that month',
+	{ meta: { scenario: 'S291' } },
+	() => {
+		asset('2026/10/01', 'Antam bar', '62.500.000', { cls: 'Gold', source: 'Bonus' });
+		asset('2026/11/01', 'Antam bar', '70.000.000', { cls: 'Gold', source: 'Bonus' });
+
+		expect(line('Total Saving')).toBe(0);
+	}
+);
+
+function sellGold(amount: string) {
+	asset('2026/10/01', 'Antam bar', '62.500.000', { cls: 'Gold', source: 'Bonus' });
+	income('2026/11/01', '8.000.000');
+	addEntry(db, alice, { type: 'sale', date: '2026/11/10', amount, currency: 'IDR', category: 'sales of asset', asset: 'AST-0001' });
+}
+
+test(
+	'a salary of 8.000.000 and a gold sale for 70.000.000 of a bar bought for 62.500.000 read total income 15.500.000 with a realized gain of 7.500.000',
+	{ meta: { scenario: 'S292' } },
+	() => {
+		sellGold('70.000.000');
+
+		expect([line('Total Income'), line('Realized gain on asset sales')]).toEqual([15500000, 7500000]);
+	}
+);
+
+test(
+	'selling that gold bar for 55.000.000 reads a realized gain of −7.500.000 and total income 500.000',
+	{ meta: { scenario: 'S293' } },
+	() => {
+		sellGold('55.000.000');
+
+		expect([line('Realized gain on asset sales'), line('Total Income')]).toEqual([-7500000, 500000]);
+	}
+);
+
 const carDebt = { category: 'Car installment', amount: '150.000.000', tenor: '36', paymentType: 'Monthly', start: '2025/06/25', end: '2028/05/25', installment: '5.200.000' };
 
 function borrow(fields: Record<string, string> = {}) {
