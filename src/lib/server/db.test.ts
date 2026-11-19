@@ -170,3 +170,28 @@ test(
 		]);
 	}
 );
+
+test(
+	'opening on 2026/11/19 a database whose dream house lacks a start date stores start saving 2026/11/19',
+	{ meta: { scenario: 'S272' } },
+	() => {
+		vi.useFakeTimers({ toFake: ['Date'] });
+		vi.setSystemTime(new Date(2026, 10, 19, 9));
+		const path = join(mkdtempSync(join(tmpdir(), 'duit-dream-')), 'old.db');
+		const old = new Database(path);
+		old.exec(`
+			CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+			CREATE TABLE plan_savings (id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, dream TEXT NOT NULL, amount REAL NOT NULL, currency TEXT NOT NULL, months INTEGER NOT NULL CHECK (months >= 1));
+			INSERT INTO users (id, name, password_hash) VALUES (1, 'alice', 'x');
+			INSERT INTO plan_savings (user_id, dream, amount, currency, months) VALUES (1, 'House', 120000000, 'IDR', 24);
+		`);
+		old.close();
+
+		const db = openDatabase(path);
+		const dreams = db.prepare('SELECT dream, start FROM plan_savings').all();
+		db.close();
+		vi.useRealTimers();
+
+		expect(dreams).toEqual([{ dream: 'House', start: '2026-11-19' }]);
+	}
+);

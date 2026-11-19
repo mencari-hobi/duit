@@ -11,7 +11,7 @@ function query(sql: string, name: string) {
 }
 
 const house = (cookie: string) =>
-	post('/plan?/save', { tab: 'saving', dream: 'House', amount: '120.000.000', currency: 'IDR', months: '24' }, cookie);
+	post('/plan?/save', { tab: 'saving', dream: 'House', amount: '120.000.000', currency: 'IDR', months: '24', start: '2026/01/01' }, cookie);
 
 const dreamOf = (name: string) =>
 	String(query('SELECT id FROM plan_savings WHERE user_id = (SELECT id FROM users WHERE name = ?)', name)[0].id);

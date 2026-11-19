@@ -118,7 +118,7 @@ test(
 		const items: Record<string, string>[] = [
 			{ tab: 'income', amount: '18.000.000', currency: 'IDR', timeframe: 'monthly', category: 'Salary', note: '' },
 			{ tab: 'expense', amount: '2.500.000', currency: 'IDR', timeframe: 'monthly', category: 'Birthday/Anniversary/Holiday', expenseType: 'Non-fixed - Non-essential', owner: 'Extended Family', note: '' },
-			{ tab: 'saving', dream: 'A house with a garden by the sea', amount: '600.000.000', currency: 'IDR', months: '120' },
+			{ tab: 'saving', dream: 'A house with a garden by the sea', amount: '600.000.000', currency: 'IDR', months: '120', start: '2026/01/01' },
 			{ tab: 'debt', category: 'Non-collateral loan', amount: '4.000.000', currency: 'IDR', start: '2026/01/25', end: '2099/10/25' }
 		];
 		for (const item of items) await post('/plan?/save', item, cookie);

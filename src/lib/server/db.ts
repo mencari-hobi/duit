@@ -1,3 +1,4 @@
+import { getLocalTimeZone, today } from '@internationalized/date';
 import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
@@ -73,7 +74,8 @@ export function openDatabase(path: string): Db {
 			dream TEXT NOT NULL,
 			amount REAL NOT NULL,
 			currency TEXT NOT NULL,
-			months INTEGER NOT NULL CHECK (months >= 1)
+			months INTEGER NOT NULL CHECK (months >= 1),
+			start TEXT NOT NULL
 		);
 		CREATE TABLE IF NOT EXISTS plan_debts (
 			id INTEGER PRIMARY KEY,
@@ -117,6 +119,10 @@ export function openDatabase(path: string): Db {
 	};
 	for (const [name, type] of Object.entries(added)) {
 		if (!columns.some((column) => column.name === name)) db.exec(`ALTER TABLE diary_assets ADD COLUMN ${name} ${type}`);
+	}
+	if (!(db.prepare('PRAGMA table_info(plan_savings)').all() as { name: string }[]).some((column) => column.name === 'start')) {
+		db.exec('ALTER TABLE plan_savings ADD COLUMN start TEXT');
+		db.prepare('UPDATE plan_savings SET start = ?').run(today(getLocalTimeZone()).toString());
 	}
 	codeOldAssets(db);
 	return db;

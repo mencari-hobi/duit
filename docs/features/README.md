@@ -70,6 +70,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R84: An upgrade moves each asset to a spec type and gives it a code
   - Scenario S209: Opening a database with "Investments", "Goldbar", and "Property" assets moves them to "Mutual Fund", "Gold", and "Property & Land"
   - Scenario S210: Opening a database with the assets "Savings account" and "Car" codes them "AST-0001" and "AST-0002" by first date, and every update of an asset shares its code
+- Rule R105: An upgrade starts each dream without a start date on the upgrade day
+  - Scenario S272: Opening on 2026/11/19 a database whose dream "House" lacks a start date stores "Start saving" 2026/11/19
 
 ## Area A6: App › Financial Diary
 
@@ -195,12 +197,13 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R64: An item added on a Plan tab stays with the account
   - Scenario S150: Adding a "Monthly" income of 18.000.000 under "Salary" with the note "Office" stores it and shows "Added ✓" (happy path)
   - Scenario S151: Adding a "Monthly" expense of 2.500.000 under "Grocery", "Non-fixed - Essential", and "Personal" stores it
-  - Scenario S152: Adding the dream "Emergency fund" of 60.000.000 in 12 months stores it
+  - Scenario S152: Adding the dream "Emergency fund" of 60.000.000 in 12 months from 2026/11/25 stores it
   - Scenario S153: Adding a "Mortgage" installment of 3.000.000 from 2026/11/25 to 2031/10/25 stores it
 - Rule R65: A Plan tab refuses an item missing a required field
   - Scenario S155: Adding an income with a blank amount shows "Please enter an amount (numbers only)." and stores nothing
   - Scenario S156: Adding a saving with a blank dream shows "Please name your dream." and stores nothing
   - Scenario S157: Adding a saving over 0 months shows "Please enter a whole number of months, 1 or more." and stores nothing
+  - Scenario S266: Adding a saving with a blank "Start saving" shows "Please pick a date." and stores nothing
   - Scenario S158: Adding a debt payment that ends before it starts shows "The end payment can't be before the start payment." and stores nothing
 - Rule R66: The Plan's lists follow the spec
   - Scenario S159: The Income categories read "Salary", "Freelance", "Dividend", "Bonus", and "Other"
@@ -211,6 +214,8 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S164: The Timeframe list reads "Daily", "Weekly", "Monthly", "Quarterly", and "Annually", with "Monthly" chosen
 - Rule R67: The Saving tab shows the amount to save per month as the user types
   - Scenario S165: Typing 60.000.000 and 12 months reads "IDR 5.000.000 per month" under "I need to save"
+- Rule R103: "Start saving" opens on today
+  - Scenario S265: The Saving tab opens with today in "Start saving"
 
 ### Feature F23: View budget
 - Rule R68: View budget converts each item to the chosen timeframe, with a month as 30 days, 4 weeks, 1/3 quarter, or 1/12 year
@@ -226,6 +231,10 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S173: An installment starting next month stays out of "Debt payment"
   - Scenario S174: An installment that ended last month stays out of "Debt payment"
   - Scenario S189: An installment outside its payment dates lists under "Not counted today", where "Edit" and "Delete" reach it
+- Rule R104: A dream counts from its "Start saving" date until its months pass
+  - Scenario S267: On 2027/11/24, a 12-month dream of 60.000.000 starting 2026/11/25 reads 5.000.000 under "Saving"
+  - Scenario S268: On 2027/11/25, the same dream stays out of "Saving" and lists under "Not counted today", where "Edit" and "Delete" reach it
+  - Scenario S269: A dream starting tomorrow stays out of "Saving" and lists under "Not counted today"
 - Rule R71: Free Cash Flow is Income − Debt payment − Saving − Expense
   - Scenario S175: Income of 20.000.000, debt payment of 4.500.000, saving of 5.000.000, and expense of 7.100.000 read "Free Cash Flow" 3.400.000
 - Rule R72: View budget shows four ratios of income
@@ -243,7 +252,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S180: Choosing "Edit" on a "Salary" income opens the Income tab with every field filled and a "Save changes" button (happy path)
   - Scenario S181: Saving 19.000.000 on the edited income stores 19000000 on the same item, adds none, and opens View budget
   - Scenario S182: Choosing "Edit" on a "Grocery" expense opens the Expense tab with its expense type and owner filled
-  - Scenario S183: Choosing "Edit" on the dream "Emergency fund" opens the Saving tab with its amount and months filled
+  - Scenario S183: Choosing "Edit" on the dream "Emergency fund" opens the Saving tab with its amount, months, and "Start saving" filled
   - Scenario S184: Choosing "Edit" on a "Mortgage" installment opens the Debt payment tab with its start and end payment filled
   - Scenario S185: Saving changes to another account's item leaves it unchanged
 - Rule R76: "Delete" on a View budget row removes that item
@@ -307,6 +316,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
 - Rule R96: Saving counts the asset purchases dated inside the period, by linked dream
   - Scenario S250: A purchase of 2.000.000 linked to "House" reads Actual 2.000.000 on "House", against the dream's monthly saving as Budget
   - Scenario S251: A purchase without a linked dream reads under "Other saving" without a budget, and a later valuation of an asset adds no saving
+  - Scenario S271: A dream whose months passed before the period, or that starts after it, adds no budget
 - Rule R97: Expense compares the Diary expenses of each expense type and category with the Plan
   - Scenario S252: A Diary grocery of 3.000.000 "Non-fixed - Essential" against a Plan grocery of 4.000.000 reads "−1.000.000" under "Non-fixed - Essential" › "Grocery" in the favourable tone
 - Rule R98: Free cash flow and the four Plan ratios compare actual with budget

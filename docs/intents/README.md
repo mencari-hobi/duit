@@ -93,3 +93,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I22: The Monthly report reads debt payments from the Diary Debt payment tab
 - Why: The Spec moves installments out of expenses, so every debt ratio reads Debt payment, and the user wants Remaining to match the Spending Report's Free Cash Flow
 - Serves: R101, R102, S110, S264
+
+## Intent I23: A Plan dream counts in the budget only while the user saves for it
+- Why: A dream counted forever, even after its months passed, so the budget read a saving the user no longer plans
+- Serves: R103, R104, R105, S152, S183, S266, S271

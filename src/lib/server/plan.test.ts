@@ -49,6 +49,7 @@ const saving = (fields: Record<string, string> = {}) => ({
 	amount: '60.000.000',
 	currency: 'IDR',
 	months: '12',
+	start: '2026/11/01',
 	...fields
 });
 
@@ -93,14 +94,6 @@ test(
 		]);
 	}
 );
-
-test('adding the dream emergency fund of 60.000.000 in 12 months stores it', { meta: { scenario: 'S152' } }, () => {
-	add(alice, saving());
-
-	expect(db.prepare('SELECT * FROM plan_savings WHERE user_id = ?').all(alice)).toEqual([
-		expect.objectContaining({ dream: 'Emergency fund', amount: 60000000, currency: 'IDR', months: 12 })
-	]);
-});
 
 test('adding a mortgage installment from 2026/11/25 to 2031/10/25 stores it', { meta: { scenario: 'S153' } }, () => {
 	add(alice, debt());
@@ -335,4 +328,52 @@ test("deleting another account's item leaves it stored", { meta: { scenario: 'S1
 	deletePlanItem(db, alice, item.key);
 
 	expect(group('Saving', bob)?.rows).toHaveLength(1);
+});
+
+test('adding the dream emergency fund of 60.000.000 in 12 months from 2026/11/25 stores it', { meta: { scenario: 'S152' } }, () => {
+	add(alice, saving({ start: '2026/11/25' }));
+
+	expect(db.prepare('SELECT * FROM plan_savings WHERE user_id = ?').all(alice)).toEqual([
+		expect.objectContaining({ dream: 'Emergency fund', amount: 60000000, currency: 'IDR', months: 12, start: '2026-11-25' })
+	]);
+});
+
+test('adding a saving with a blank start saving is refused and stores nothing', { meta: { scenario: 'S266' } }, () => {
+	const result = savePlanItem(db, alice, saving({ start: '' }));
+
+	expect(result).toEqual({ message: 'Please pick a date.', field: 'start' });
+	expect(db.prepare('SELECT count(*) AS count FROM plan_savings').get()).toEqual({ count: 0 });
+});
+
+const dreamOn = (day: string) => budget(db, alice, 'IDR', 'monthly', day);
+
+test('on 2027/11/24, a 12-month dream of 60.000.000 starting 2026/11/25 reads 5.000.000 under saving', { meta: { scenario: 'S267' } }, () => {
+	add(alice, saving({ start: '2026/11/25' }));
+
+	expect(dreamOn('2027-11-24')?.groups.find((found) => found.name === 'Saving')?.total).toBe(5000000);
+});
+
+test(
+	'on 2027/11/25, the same dream stays out of saving and lists apart from the totals, where edit and delete reach it',
+	{ meta: { scenario: 'S268' } },
+	() => {
+		add(alice, saving({ start: '2026/11/25' }));
+
+		const view = dreamOn('2027-11-25');
+		expect(view?.groups.find((found) => found.name === 'Saving')).toBeUndefined();
+		expect(view?.idle.map(({ key, label, amount }) => [key.charAt(0), label, amount])).toEqual([['s', 'Emergency fund', 5000000]]);
+	}
+);
+
+test('a dream starting tomorrow stays out of saving and lists apart from the totals', { meta: { scenario: 'S269' } }, () => {
+	add(alice, saving({ start: '2026/11/19' }));
+
+	expect(group('Saving')).toBeUndefined();
+	expect(view()?.idle.map(({ label }) => label)).toEqual(['Emergency fund']);
+});
+
+test('a dream starting today counts', () => {
+	add(alice, saving({ start: '2026/11/18' }));
+
+	expect(group('Saving')?.total).toBe(5000000);
 });

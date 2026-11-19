@@ -22,6 +22,7 @@ export const load: PageServerLoad = ({ locals, url }) => {
 		tab: editing?.tab ?? tabs.find((item) => item.value === url.searchParams.get('tab'))?.value ?? 'income',
 		view,
 		editing,
+		today: localDay().replaceAll('-', '/'),
 		budget: budget(database(), user.id, currency, view, localDay())
 	};
 };

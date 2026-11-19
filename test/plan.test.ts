@@ -26,7 +26,13 @@ const grocery = {
 	note: ''
 };
 
-const dream = { tab: 'saving', dream: 'Emergency fund', amount: '60.000.000', currency: 'IDR', months: '12' };
+const pad = (n: number) => String(n).padStart(2, '0');
+
+const now = new Date();
+
+const todaySlash = `${now.getFullYear()}/${pad(now.getMonth() + 1)}/${pad(now.getDate())}`;
+
+const dream = { tab: 'saving', dream: 'Emergency fund', amount: '60.000.000', currency: 'IDR', months: '12', start: todaySlash };
 
 const mortgage = { tab: 'debt', category: 'Mortgage', amount: '3.000.000', currency: 'IDR', start: '2026/01/25', end: '2099/10/25' };
 
@@ -274,20 +280,6 @@ test(
 );
 
 test(
-	'choosing edit on the dream emergency fund opens the saving tab with its amount and months',
-	{ meta: { scenario: 'S183' } },
-	async () => {
-		const { cookie } = await planned(dream);
-
-		const page = await edit(cookie, 'Emergency fund');
-
-		expect(await page.getByLabel('My dream').inputValue()).toBe('Emergency fund');
-		expect(await page.getByLabel('Amount I need (IDR)').inputValue()).toBe('60.000.000');
-		expect(await page.getByLabel('I will achieve this in (months)').inputValue()).toBe('12');
-	}
-);
-
-test(
 	'choosing edit on a mortgage installment opens the debt payment tab with its start and end payment',
 	{ meta: { scenario: 'S184' } },
 	async () => {
@@ -311,5 +303,28 @@ test(
 
 		await expect.poll(() => page.getByRole('link', { name: 'Edit Salary' }).count()).toBe(0);
 		expect(rows('plan_entries', name).map((row) => row.category)).toEqual(['grocery']);
+	}
+);
+
+test('the saving tab opens with today in start saving', { meta: { scenario: 'S265' } }, async () => {
+	const { cookie } = await registered();
+
+	const page = await openTab(cookie, 'Saving');
+
+	expect(await page.getByLabel('Start saving').inputValue()).toBe(todaySlash);
+});
+
+test(
+	'choosing edit on the dream emergency fund opens the saving tab with its amount, months, and start saving',
+	{ meta: { scenario: 'S183' } },
+	async () => {
+		const { cookie } = await planned({ ...dream, start: '2026/11/25' });
+
+		const page = await edit(cookie, 'Emergency fund');
+
+		expect(await page.getByLabel('My dream').inputValue()).toBe('Emergency fund');
+		expect(await page.getByLabel('Amount I need (IDR)').inputValue()).toBe('60.000.000');
+		expect(await page.getByLabel('I will achieve this in (months)').inputValue()).toBe('12');
+		expect(await page.getByLabel('Start saving').inputValue()).toBe('2026/11/25');
 	}
 );

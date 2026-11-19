@@ -5,6 +5,7 @@ import { timeframe } from '#lib/plan.ts';
 import { monthOf } from './dashboard';
 import type { Db } from './db';
 import { dueIn, reportingWindow, type DebtRow } from './debts';
+import { savingEnd } from './plan';
 import { readSettings } from './settings';
 
 type Query = { period?: string; date?: string; from?: string; to?: string };
@@ -95,10 +96,14 @@ export function spendingReport(db: Db, userId: number, start: string, end: strin
 	const { currency, startDay } = readSettings(db, userId);
 	const all = (sql: string, ...params: unknown[]) => db.prepare(sql).all(userId, ...params) as never[];
 	const planEntries: PlanEntry[] = all('SELECT * FROM plan_entries WHERE user_id = ? AND currency = ? ORDER BY id', currency);
-	const planSavings: { id: number; dream: string; amount: number; months: number }[] = all(
-		'SELECT * FROM plan_savings WHERE user_id = ? AND currency = ? ORDER BY id',
-		currency
-	);
+	const planSavings = (
+		all('SELECT * FROM plan_savings WHERE user_id = ? AND currency = ? AND start <= ? ORDER BY id', currency, end) as {
+			dream: string;
+			amount: number;
+			months: number;
+			start: string;
+		}[]
+	).filter((item) => savingEnd(item) > start);
 	const planDebts: { category: string; amount: number }[] = all(
 		'SELECT * FROM plan_debts WHERE user_id = ? AND currency = ? AND start <= ? AND end >= ? ORDER BY id',
 		currency,
