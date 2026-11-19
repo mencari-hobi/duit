@@ -225,7 +225,7 @@ test('two entries on the same date list the later one first', () => {
 });
 
 test('a purchase linked to a dream opens for editing with that dream chosen', () => {
-	savePlanItem(db, alice, { tab: 'saving', dream: 'House', amount: '120.000.000', currency: 'IDR', months: '24' });
+	savePlanItem(db, alice, { tab: 'saving', dream: 'House', amount: '120.000.000', currency: 'IDR', months: '24', start: '2026/11/01' });
 	const dream = String((db.prepare('SELECT id FROM plan_savings').get() as { id: number }).id);
 	buy(alice, { note: 'BCA', dream });
 	const [record] = listRecords(db, alice);

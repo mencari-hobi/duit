@@ -31,7 +31,7 @@
 	);
 	let dreamAmount = $derived(kept.amount ?? '');
 	let months = $derived(kept.months ?? '');
-	let start = $derived(kept.start ?? '');
+	let start = $derived(kept.start ?? (tab === 'saving' ? data.today : ''));
 	let end = $derived(kept.end ?? '');
 
 	const perMonth = $derived.by(() => {
@@ -257,6 +257,7 @@
 						<Label for="months">I will achieve this in (months)</Label>
 						<Input id="months" name="months" inputmode="numeric" autocomplete="off" bind:value={months} {...flagged('months')} class={field} />
 					</div>
+					{@render dateField('start', 'Start saving', start, (text) => (start = text))}
 				</div>
 				<div class="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-primary/10 px-4 py-3 text-primary">
 					<div>

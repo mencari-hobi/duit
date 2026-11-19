@@ -1,3 +1,4 @@
+import { parseDate } from '@internationalized/date';
 import { parseAmount } from '#lib/amount.ts';
 import { capitalize, expenseTypes } from '#lib/category.ts';
 import { isoDate } from '#lib/date.ts';
@@ -45,13 +46,16 @@ function insert(db: Db, userId: number, fields: Fields, id: number | null): Refu
 		if (!/^\d+$/.test(months) || Number(months) < 1) {
 			return { message: 'Please enter a whole number of months, 1 or more.', field: 'months' };
 		}
-		db.prepare('INSERT INTO plan_savings (id, user_id, dream, amount, currency, months) VALUES (?, ?, ?, ?, ?, ?)').run(
+		const start = isoDate(field(fields, 'start'));
+		if (!start) return { message: 'Please pick a date.', field: 'start' };
+		db.prepare('INSERT INTO plan_savings (id, user_id, dream, amount, currency, months, start) VALUES (?, ?, ?, ?, ?, ?, ?)').run(
 			id,
 			userId,
 			dream,
 			amount,
 			currency,
-			Number(months)
+			Number(months),
+			start
 		);
 		return { added: true };
 	}
@@ -131,7 +135,9 @@ type Entry = {
 	note: string;
 };
 
-type Saving = { id: number; dream: string; amount: number; currency: string; months: number };
+type Saving = { id: number; dream: string; amount: number; currency: string; months: number; start: string };
+
+export const savingEnd = (saving: { start: string; months: number }) => parseDate(saving.start).add({ months: saving.months }).toString();
 
 type Debt = { id: number; category: string; amount: number; currency: string; start: string; end: string };
 
@@ -153,7 +159,15 @@ export function editablePlanItem(db: Db, userId: number, key: string): Record<st
 	if (!row) return null;
 	if (item.table === 'plan_savings') {
 		const saving = row as Saving;
-		return { id: key, tab: 'saving', dream: saving.dream, amount: money(saving.amount), currency: saving.currency, months: String(saving.months) };
+		return {
+			id: key,
+			tab: 'saving',
+			dream: saving.dream,
+			amount: money(saving.amount),
+			currency: saving.currency,
+			months: String(saving.months),
+			start: slash(saving.start)
+		};
 	}
 	if (item.table === 'plan_debts') {
 		const debt = row as Debt;
@@ -198,6 +212,7 @@ export function budget(db: Db, userId: number, currency: string, view: string, t
 	const per = timeframe(view).perMonth;
 	const counted = (item: { currency: string }) => item.currency === currency;
 	const active = (item: Debt) => counted(item) && item.start <= today && today <= item.end;
+	const saving = (item: Saving) => counted(item) && item.start <= today && today < savingEnd(item);
 	const entryRow = (entry: Entry): Row => ({
 		key: `p${entry.id}`,
 		label: capitalize(entry.category),
@@ -218,11 +233,11 @@ export function budget(db: Db, userId: number, currency: string, view: string, t
 	const income = planned.filter((entry) => entry.kind === 'income').map(entryRow);
 	const spent = planned.filter((entry) => entry.kind === 'expense');
 	const debt = allDebts.filter(active).map(debtRow);
-	const saving = allSavings.filter(counted).map(savingRow);
+	const saved = allSavings.filter(saving).map(savingRow);
 	const idle = [
 		...allEntries.filter((entry) => !counted(entry)).map(entryRow),
 		...allDebts.filter((item) => !active(item)).map(debtRow),
-		...allSavings.filter((item) => !counted(item)).map(savingRow)
+		...allSavings.filter((item) => !saving(item)).map(savingRow)
 	];
 	const types = expenseTypes
 		.map((type) => section(type, spent.filter((entry) => entry.expense_type === type).map(entryRow)))
@@ -231,7 +246,7 @@ export function budget(db: Db, userId: number, currency: string, view: string, t
 	const groups = [
 		{ ...section('Income', income), types: [] },
 		{ ...section('Debt payment', debt), types: [] },
-		{ ...section('Saving', saving), types: [] },
+		{ ...section('Saving', saved), types: [] },
 		{ ...section('Expense', expense), types }
 	].filter((group) => group.rows.length);
 	if (!groups.length && !idle.length) return null;
