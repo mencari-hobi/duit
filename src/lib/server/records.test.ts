@@ -5,6 +5,7 @@ import { openDatabase, type Db } from './db';
 import { heldAssets, savePurchase, saveUpdates } from './assets';
 import { addEntry, saveEntry } from './entries';
 import { oldLiability } from './holdings-fixture';
+import { savePlanItem } from './plan';
 import { deleteRecord, editableRecord, listRecords, wipeRecords } from './records';
 
 let db: Db;
@@ -223,8 +224,10 @@ test('two entries on the same date list the later one first', () => {
 	expect(listRecords(db, alice).map((record) => record.category)).toEqual(['eating out', 'grocery']);
 });
 
-test('a purchase opens for editing with its fields shaped for the Purchase form', () => {
-	buy(alice, { note: 'BCA' });
+test('a purchase linked to a dream opens for editing with that dream chosen', () => {
+	savePlanItem(db, alice, { tab: 'saving', dream: 'House', amount: '120.000.000', currency: 'IDR', months: '24' });
+	const dream = String((db.prepare('SELECT id FROM plan_savings').get() as { id: number }).id);
+	buy(alice, { note: 'BCA', dream });
 	const [record] = listRecords(db, alice);
 
 	expect(editableRecord(db, alice, record.id)).toEqual({
@@ -237,10 +240,10 @@ test('a purchase opens for editing with its fields shaped for the Purchase form'
 		unitCurrency: 'IDR',
 		amount: '12.000.000',
 		currency: 'IDR',
-		note: 'BCA'
+		note: 'BCA',
+		dream
 	});
 });
-
 
 test('choosing edit on an asset update opens the asset list', { meta: { scenario: 'S208' } }, () => {
 	buy(alice);

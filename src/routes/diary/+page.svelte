@@ -194,6 +194,7 @@
 				currency={data.settings!.currency}
 				today={day}
 				nextCode={data.nextCode}
+				dreams={data.dreams}
 				error={form?.error}
 				invalid={form?.field}
 				saved={form?.saved}

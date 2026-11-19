@@ -22,6 +22,7 @@ export type AssetRow = {
 	unit: number | null;
 	unit_currency: string | null;
 	sale_id: number | null;
+	dream_id: number | null;
 };
 
 const field = (fields: Fields, name: string) => (fields[name] ?? '').trim();
@@ -53,6 +54,9 @@ export function savePurchase(db: Db, userId: number, fields: Fields): Refusal | 
 	if (!cost) return { message: 'Please enter the acquisition cost (numbers only).', field: 'amount' };
 	const currency = field(fields, 'currency');
 	if (!isCurrency(currency)) return { message: 'Pick a currency from the list.', field: 'currency' };
+	const dream = field(fields, 'dream');
+	const dreamId =
+		dream && db.prepare('SELECT 1 FROM plan_savings WHERE id = ? AND user_id = ?').get(Number(dream), userId) ? Number(dream) : null;
 	const asset = {
 		cls,
 		source: field(fields, 'source') || null,
@@ -66,18 +70,18 @@ export function savePurchase(db: Db, userId: number, fields: Fields): Refusal | 
 		if (!purchase) return { missing: true };
 		db.transaction(() => {
 			db.prepare(
-				`UPDATE diary_assets SET class = ?, source = ?, unit = ?, unit_currency = ?, name = ?, acquisition = ?
+				`UPDATE diary_assets SET class = ?, source = ?, unit = ?, unit_currency = ?, name = ?, acquisition = ?, dream_id = ?
 				WHERE user_id = ? AND code = ?`
-			).run(asset.cls, asset.source, asset.unit, asset.unitCurrency, asset.name, asset.acquisition, userId, purchase.code);
+			).run(asset.cls, asset.source, asset.unit, asset.unitCurrency, asset.name, asset.acquisition, dreamId, userId, purchase.code);
 			db.prepare('UPDATE diary_assets SET date = ?, value = ?, currency = ? WHERE id = ?').run(date, cost, currency, purchase.id);
 		})();
 		return { saved: purchase.code };
 	}
 	const code = nextAssetCode(db, userId);
 	db.prepare(
-		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, code, unit, unit_currency)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?)`
-	).run(userId, date, asset.name, cls, cost, currency, asset.source, cost, code, unit, unitCurrency);
+		`INSERT INTO diary_assets (user_id, date, name, class, value, currency, source, acquisition, note, code, unit, unit_currency, dream_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', ?, ?, ?, ?)`
+	).run(userId, date, asset.name, cls, cost, currency, asset.source, cost, code, unit, unitCurrency, dreamId);
 	return { saved: code };
 }
 
@@ -161,6 +165,7 @@ export function editablePurchase(row: AssetRow) {
 		unitCurrency: row.unit_currency ?? '',
 		amount: money(row.acquisition ?? row.value),
 		currency: row.currency,
-		note: row.name
+		note: row.name,
+		dream: row.dream_id == null ? '' : String(row.dream_id)
 	};
 }

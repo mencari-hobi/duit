@@ -2,9 +2,14 @@
 	import { Button } from '#lib/components/ui/button/index.js';
 	import FileChartColumnIcon from '@lucide/svelte/icons/file-chart-column';
 	import { notes, shown } from '#lib/report.ts';
+	import SpendingReport from '#lib/SpendingReport.svelte';
 
 	let { data } = $props();
-	const report = $derived(data.report);
+	const report = $derived(data.view === 'monthly' ? data.report : data.spending);
+	const views = [
+		['spending', 'Spending Report', '/snapshot'],
+		['monthly', 'Monthly report', '/snapshot?view=monthly']
+	];
 
 	const indent = ['pl-4', 'pl-7', 'pl-10'];
 
@@ -26,12 +31,27 @@
 
 <div>
 	<h1 class="text-3xl">Financial Snapshot</h1>
-	{#if report}
-		<p class="text-muted-foreground">The last 3 reporting months, in millions of {report.currency}</p>
+	{#if data.view === 'monthly' && data.report}
+		<p class="text-muted-foreground">The last 3 reporting months, in millions of {data.report.currency}</p>
 	{/if}
 </div>
 
-{#if !report}
+<nav aria-label="Snapshot views" class="flex gap-4 border-b">
+	{#each views as [value, label, href] (value)}
+		<a
+			{href}
+			aria-current={data.view === value ? 'page' : undefined}
+			class={[
+				'-mb-px border-b-2 px-1 pb-2 text-base font-medium no-underline hover:no-underline',
+				data.view === value ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+			]}
+		>
+			{label}
+		</a>
+	{/each}
+</nav>
+
+{#if !report && !(data.view === 'spending' && data.chosen.error)}
 	<div class="flex flex-col items-center gap-3 py-16 text-center">
 		<div class="grid size-14 place-items-center rounded-full bg-muted text-muted-foreground">
 			<FileChartColumnIcon class="size-6" />
@@ -40,7 +60,10 @@
 		<p class="max-w-xs text-sm text-muted-foreground">The report fills in once you add an income, an expense, or an asset.</p>
 		<Button href="/diary" variant="outline" class="mt-2 h-11 px-6 text-base">Add entry</Button>
 	</div>
-{:else}
+{:else if data.view === 'spending'}
+	<SpendingReport report={data.spending} chosen={data.chosen} periods={data.periods} />
+{:else if data.report}
+	{@const report = data.report}
 	{#each report.sections as section (section.id)}
 		<section id={section.id} aria-labelledby="{section.id}-title" class="scroll-mt-20 overflow-hidden rounded-xl border bg-card">
 			<h2 id="{section.id}-title" class="border-b px-4 py-3 text-lg">{section.title}</h2>

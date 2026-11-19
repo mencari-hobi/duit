@@ -16,7 +16,7 @@ test(
 			);
 		}
 
-		const page = await openPage('/snapshot', cookie);
+		const page = await openPage('/snapshot?view=monthly', cookie);
 		const flow = page.getByRole('region', { name: 'Income vs Expense Report' });
 
 		expect((await flow.getByRole('columnheader').allTextContents()).map((text) => text.trim())).toEqual([
@@ -41,7 +41,7 @@ test(
 				cookie
 			);
 		}
-		const page = await openPage('/snapshot', cookie, 360);
+		const page = await openPage('/snapshot?view=monthly', cookie, 360);
 		const flow = page.getByRole('region', { name: 'Income vs Expense Report' });
 		const fade = flow.locator('[aria-hidden="true"]').last();
 		const opacity = () => fade.evaluate((element) => getComputedStyle(element).opacity);
@@ -66,7 +66,7 @@ test('expenses of 2.000.000 against an income of 1.000.000 show a remaining amou
 		cookie
 	);
 
-	const page = await openPage('/snapshot', cookie);
+	const page = await openPage('/snapshot?view=monthly', cookie);
 	const remaining = page.getByRole('row', { name: /Remaining Amount/ }).getByRole('cell').last();
 
 	expect([await remaining.textContent(), await remaining.getAttribute('class')]).toEqual([
@@ -79,7 +79,7 @@ test('an account with a cash asset sees the asset report with its cash value', a
 	const { cookie } = await registered();
 	await addHolding(cookie, { date: '2026/11/05', amount: '10.000.000', name: 'Savings account' });
 
-	const page = await openPage('/snapshot', cookie);
+	const page = await openPage('/snapshot?view=monthly', cookie);
 	const worth = page.getByRole('region', { name: 'Asset Report (market value unless stated)' });
 
 	await expect
@@ -96,7 +96,7 @@ test('with the default currency USD, the report names USD under its title and in
 		cookie
 	);
 
-	const page = await openPage('/snapshot', cookie);
+	const page = await openPage('/snapshot?view=monthly', cookie);
 	const notes = page.getByRole('region', { name: 'How the numbers are built' });
 
 	expect([

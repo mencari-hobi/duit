@@ -89,6 +89,12 @@ export const editableDebt = (debt: DebtRow) => ({
 
 const schedule = (debt: DebtRow) => paymentDates({ start: debt.start, end: debt.end, tenor: debt.tenor, paymentType: debt.payment_type });
 
+export function dueIn(debt: DebtRow, month: string, startDay: number) {
+	const { start, end } = reportingWindow(month, startDay);
+	const [from, to] = [start.toString(), end.toString()];
+	return debt.installment * schedule(debt).filter((date) => date >= from && date <= to).length;
+}
+
 const totalOf = (debt: DebtRow) => debt.installment * paymentCount(debt.tenor, debt.payment_type);
 
 export function reportingWindow(month: string, startDay: number) {
