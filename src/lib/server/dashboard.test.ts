@@ -302,12 +302,12 @@ test(
 		asset('2026/10/01', 'Car', '150.000.000', { cls: 'Other' });
 		income('2026/11/05', '10.000.000');
 		addEntry(db, alice, {
-			type: 'income',
+			type: 'sale',
 			date: '2026/11/06',
 			amount: '150.000.000',
 			currency: 'IDR',
 			category: 'sales of asset',
-			asset: 'Car'
+			asset: 'AST-0001'
 		});
 
 		expect(board().cards).toMatchObject({ income: 10000000 });

@@ -16,9 +16,10 @@
 		error?: string;
 		invalid?: string;
 		updated?: number;
+		sold?: string;
 	};
 
-	let { list, filter, currency, today, error, invalid, updated }: Props = $props();
+	let { list, filter, currency, today, error, invalid, updated, sold }: Props = $props();
 
 	const shown = (n: number) => group(String(Math.round(n)));
 	const signed = (n: number) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${shown(Math.abs(n))}`;
@@ -32,6 +33,9 @@
 
 {#if !list}
 	<p class="py-12 text-center font-heading text-xl">No assets yet. Save a purchase first.</p>
+	{#if sold}
+		<p id="message" role="status" class="text-center font-semibold text-in">Sold {sold} ✓</p>
+	{/if}
 {:else}
 	<form method="GET" class="flex flex-col gap-1.5 sm:max-w-xs">
 		<input type="hidden" name="tab" value="asset" />
@@ -58,7 +62,8 @@
 						<th scope="col" class={[head, 'text-right']}>Acquisition cost ({currency})</th>
 						<th scope="col" class={head}>Value as of</th>
 						<th scope="col" class={head}>Market value ({currency})</th>
-						<th scope="col" class={[head, 'pr-4 text-right']}>Gain / Loss ({currency})</th>
+						<th scope="col" class={[head, 'text-right']}>Gain / Loss ({currency})</th>
+						<th scope="col" class={[head, 'pr-4']}><span class="sr-only">Actions</span></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -93,7 +98,10 @@
 									class={[cell, 'w-36']}
 								/>
 							</td>
-							<td class={['py-2 pr-4 pl-2 text-right whitespace-nowrap tabular-nums', tone(row.gain)]}>{signed(row.gain)}</td>
+							<td class={['px-2 py-2 text-right whitespace-nowrap tabular-nums', tone(row.gain)]}>{signed(row.gain)}</td>
+							<td class="py-1 pr-4 pl-2">
+								<Button href="/diary?tab=asset&view=list&sell={row.code}" variant="outline" size="sm" class="h-9">Sell</Button>
+							</td>
 						</tr>
 					{/each}
 				</tbody>
@@ -103,9 +111,10 @@
 						<td class="px-2 py-2 text-right tabular-nums">{shown(list.total.cost)}</td>
 						<td></td>
 						<td class="px-2 py-2 tabular-nums">{shown(list.total.value)}</td>
-						<td class={['py-2 pr-4 pl-2 text-right whitespace-nowrap tabular-nums', tone(list.total.gain)]}>
+						<td class={['px-2 py-2 text-right whitespace-nowrap tabular-nums', tone(list.total.gain)]}>
 							{signed(list.total.gain)}{list.total.share === null ? '' : ` (${(list.total.share * 100).toFixed(1)}%)`}
 						</td>
+						<td></td>
 					</tr>
 				</tfoot>
 			</table>
@@ -115,6 +124,8 @@
 			<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">Save updates</Button>
 			{#if error}
 				<p id="message" role="alert" class="font-semibold text-destructive">{error}</p>
+			{:else if sold}
+				<p id="message" role="status" class="font-semibold text-in">Sold {sold} ✓</p>
 			{:else if updated !== undefined}
 				<p id="message" role="status" class="font-semibold text-in">Saved ✓</p>
 			{/if}

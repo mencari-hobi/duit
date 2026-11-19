@@ -1,3 +1,4 @@
+import { assetLabel } from '#lib/asset.ts';
 import { sale } from '#lib/category.ts';
 import { day, money, type Record } from '#lib/record.ts';
 import { editablePurchase, purchaseOf } from './assets';
@@ -58,18 +59,18 @@ export function editableRecord(db: Db, userId: number, key: string): { [field: s
 		const purchase = purchaseOf(db, userId, id);
 		return purchase ? editablePurchase(purchase) : { id: key, type: 'asset', view: 'list' };
 	}
+	if (record.category === sale) return { ...common, type: 'sale', ...soldAsset(db, recordKey(key)!.id), note: record.note };
 	return {
 		...common,
 		category: record.category!,
-		...(record.category === sale ? { asset: soldAsset(db, recordKey(key)!.id) } : {}),
 		...(record.kind === 'expense' ? { expenseType: record.expenseType!, owner: record.owner! } : {}),
 		note: record.note
 	};
 }
 
 function soldAsset(db: Db, saleId: number) {
-	const row = db.prepare('SELECT code FROM diary_assets WHERE sale_id = ?').get(saleId) as { code: string } | undefined;
-	return row?.code ?? '';
+	const row = db.prepare('SELECT code, name FROM diary_assets WHERE sale_id = ?').get(saleId) as { code: string; name: string } | undefined;
+	return { asset: row?.code ?? '', label: row ? assetLabel(row.code, row.name) : '' };
 }
 
 export function deleteRecord(db: Db, userId: number, key: string) {

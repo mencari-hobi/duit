@@ -164,7 +164,7 @@ test('a currency unit reads its currency before the amount', () => {
 
 test('a sold asset and a liability stay out of the asset list', { meta: { scenario: 'S200' } }, () => {
 	buy(alice, { cls: 'Other', note: 'Car' });
-	addEntry(db, alice, { type: 'income', date: '2026/11/20', amount: '150.000.000', currency: 'IDR', category: 'sales of asset', asset: 'AST-0001', note: '' });
+	addEntry(db, alice, { type: 'sale', date: '2026/11/20', amount: '150.000.000', currency: 'IDR', category: 'sales of asset', asset: 'AST-0001', note: '' });
 	addEntry(db, alice, { type: 'debt', date: '2026/11/20', amount: '3.000.000', currency: 'IDR', name: 'Mortgage loan', term: 'Long term', note: '' });
 
 	expect(listed()).toBeNull();
