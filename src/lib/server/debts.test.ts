@@ -202,14 +202,56 @@ test('ticking DBT-0001 for 2026-11 stores its payment paid today', () => {
 	expect(debtTable(db, alice, '2026-11')!.rows[0].paid).toBe(true);
 });
 
-test('saving the tick again keeps the first paid date', () => {
+test('changing the paid date of a saved payment stores the new date', { meta: { scenario: 'S296' } }, () => {
 	startDay25();
 	borrow(alice);
-	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on' }, '2026-11-18');
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/11/18' }, '2026-11-18');
 
-	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on' }, '2026-11-20');
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/11/10' }, '2026-11-20');
+
+	expect(payments()).toEqual([expect.objectContaining({ month: '2026-11', paid_date: '2026-11-10' })]);
+});
+
+test('a ticked row with an impossible paid date stores no payment', { meta: { scenario: 'S298' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	expect(savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/02/30' }, '2026-11-18')).toEqual({
+		message: 'Please pick a date.',
+		field: 'paidDate-DBT-0001'
+	});
+	expect(payments()).toEqual([]);
+});
+
+test('a ticked row with an empty paid date stores no payment', { meta: { scenario: 'S299' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	expect(savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '' }, '2026-11-18')).toEqual({
+		message: 'Please pick a date.',
+		field: 'paidDate-DBT-0001'
+	});
+	expect(payments()).toEqual([]);
+});
+
+test('a refused paid date keeps the payments of the other rows unchanged', () => {
+	startDay25();
+	borrow(alice);
+	borrow(alice);
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/11/18' }, '2026-11-18');
+
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0002': 'on', 'paidDate-DBT-0002': '' }, '2026-11-18');
 
 	expect(payments()).toEqual([expect.objectContaining({ paid_date: '2026-11-18' })]);
+});
+
+test('the debt table gives the paid date of each ticked row', () => {
+	startDay25();
+	borrow(alice);
+	borrow(alice);
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/11/20' }, '2026-11-18');
+
+	expect(debtTable(db, alice, '2026-11')!.paidDates).toEqual({ 'DBT-0001': '2026-11-20' });
 });
 
 test('unticking DBT-0001 removes its payment for 2026-11', { meta: { scenario: 'S231' } }, () => {

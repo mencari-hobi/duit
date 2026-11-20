@@ -56,7 +56,8 @@ export const actions: Actions = {
 		const userId = signedInUser(locals).id;
 		if (values.type === 'payments') {
 			if (!/^\d{4}-\d{2}$/.test(values.month ?? '')) error(400, 'Pick a reporting month.');
-			savePayments(database(), userId, values.month, values, todayIso());
+			const result = savePayments(database(), userId, values.month, values, todayIso());
+			if ('message' in result) return fail(400, { error: result.message, field: result.field, values: { ...values, type: 'debt' } });
 			return { paid: true, values: { type: 'debt' } };
 		}
 		if (values.type === 'debt') {

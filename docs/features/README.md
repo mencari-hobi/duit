@@ -25,7 +25,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S188: On a 360 px wide screen, `/plan` on View budget with an item of each kind fits the screen width
   - Scenario S211: On a 360 px wide screen, `/diary` on the Asset list with an asset fits the screen width
   - Scenario S238: On a 360 px wide screen, `/diary` on Debt payment with a debt fits the screen width
-  - Scenario S274: On a 360 px wide screen, `/diary` on a "Cash" purchase shows the unit field wider than its currency picker
+  - Scenario S302: On a 360 px wide screen, `/diary` on a "Cash" purchase shows the unit field wider than its currency picker
 
 ### Feature F7: Sidebar menu
 - Rule R12: The sidebar menu reaches every section of the app from every signed-in page
@@ -88,7 +88,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S56: Typing 1250000 into the amount shows "1.250.000"
   - Scenario S57: Adding the amount "1.250.000" stores 1250000
   - Scenario S58: Adding the amount "12,5" stores 12.5
-  - Scenario S273: Typing 2.5 into the unit shows "2,5", so a phone keyboard with only a dot key can type decimals
+  - Scenario S303: Typing 2.5 into the unit shows "2,5", so a phone keyboard with only a dot key can type decimals
 - Rule R22: The category list follows the entry type
   - Scenario S39: With "Income" chosen, the category list shows "Salary", "Freelance", "Dividend", "Bonus", and "Other"
   - Scenario S273: For an account with a stored sale, the income category list lacks "Sales of Asset"
@@ -189,9 +189,17 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S227: A debt whose last payment falls before the month, and a debt whose start payment falls after it, stay out of the table
   - Scenario S228: The total row sums the debt & interest amounts, the due amounts, the remaining debts, and the overdue amounts, and reads "<n> unpaid" for the unticked rows
   - Scenario S229: "Reporting month" lists each month from the earliest start payment to the current month, newest first, and choosing an earlier month shows that month's due amounts
-- Rule R90: "Save payments" stores the Paid tick of each debt for the chosen month, dated the day of the save
+- Rule R90: "Save payments" stores the Paid tick of each debt for the chosen month, dated by the row's paid date
   - Scenario S230: Ticking "DBT-0001" for 2026-11 and saving stores a payment of "DBT-0001" for 2026-11 paid today, shows "Saved ✓", and keeps the box ticked
   - Scenario S231: Unticking "DBT-0001" and saving removes its payment for 2026-11
+- Rule R113: The paid date of a ticked row starts at the day the box is ticked, and takes another date
+  - Scenario S294: Ticking "DBT-0001" fills its paid date with today as YYYY/MM/DD
+  - Scenario S295: Ticking "DBT-0001" for 2026-11, typing the paid date "2026/11/20", and saving stores a payment for 2026-11 paid on 2026/11/20, and the row reopens with "2026/11/20"
+  - Scenario S296: Changing the paid date of a saved payment for 2026-11 to "2026/11/10" and saving stores 2026/11/10 as its paid date
+  - Scenario S297: Unticking "DBT-0001" empties its paid date
+- Rule R114: A ticked row without a valid paid date stores no payment
+  - Scenario S298: Saving "DBT-0001" ticked with the paid date "2026/02/30" shows "Please pick a date." and stores no payment for 2026-11
+  - Scenario S299: Saving "DBT-0001" ticked with an empty paid date shows "Please pick a date." and stores no payment for 2026-11
 - Rule R108: Remaining debt is the debt & interest amount less the due amount of each month ticked Paid, up to the chosen month
   - Scenario S232: Ticking "DBT-0001" for 2026-11 lowers its remaining debt for 2026-11 from "187.200.000" to "182.000.000"
   - Scenario S283: A Paid tick for 2026-11 leaves the remaining debt for 2026-10 at "187.200.000"
@@ -321,6 +329,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S247: A sale of an asset in the period stays out of income
 - Rule R95: Debt payment counts each installment ticked Paid with a paid date inside the period, by debt category
   - Scenario S248: "DBT-0001" ticked for 2026-11 on 2026/11/18, due 5.200.000, reads Actual 5.200.000 under "Car installment" for a period covering 2026/11/18, and 0 for a period ending 2026/11/17
+  - Scenario S300: "DBT-0001" ticked for 2026-11 with the paid date "2026/10/20" reads Actual 5.200.000 under "Car installment" for a period covering 2026/10/20, and 0 for a period from 2026/10/21
   - Scenario S249: A Plan "Car installment" of 5.000.000 running through the period reads Budget 5.000.000, and the actual 5.200.000 reads "+200.000" in the unfavourable tone
 - Rule R96: Saving counts the asset purchases dated inside the period, by linked dream
   - Scenario S250: A purchase of 2.000.000 linked to "House" reads Actual 2.000.000 on "House", against the dream's monthly saving as Budget
@@ -357,6 +366,7 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S293: Selling that asset for 55.000.000 reads "Realized gain on asset sales" −7,50 and "Total Income" 0,50
 - Rule R101: The income and expense section totals the installments ticked Paid in each reporting month, by debt category
   - Scenario S261: A "Car installment" debt of 5.200.000 a month ticked Paid on 2026/11/18 reads "Total Debt payment" 5,20 in the column "2026/11", with "Car installment" 5,20 under it
+  - Scenario S301: With the reporting start day 25, a Paid tick for 2026-11 with the paid date "2026/10/20" reads "Total Debt payment" 5,20 in the column "2026/10", and 0,00 in "2026/11"
   - Scenario S262: A tick for the reporting month 2026-10 saved on 2026/11/18 counts in "2026/11" and leaves "Total Debt payment" of "2026/10" at "–"
 - Rule R58: The report keeps asset sales out of "Total Income" and shows them on a memo line
   - Scenario S133: A salary of 8.000.000 and a sale of 50.000.000 in 2026/11 read "Total Income" 8,00 and "Sales of Asset (memo, not counted as income)" 50,00

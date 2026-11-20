@@ -195,6 +195,58 @@ test(
 	}
 );
 
+test('ticking DBT-0001 fills its paid date with today', { meta: { scenario: 'S294' } }, async () => {
+	const { cookie } = await registered();
+	await post('/diary', carDebt, cookie);
+	const page = await openDebtTab(cookie, 'payments');
+
+	await page.getByLabel('DBT-0001 paid').check();
+
+	expect(await page.getByLabel('Paid date of DBT-0001').inputValue()).toBe(localDay().replaceAll('-', '/'));
+});
+
+test(
+	'ticking DBT-0001, typing the paid date 2026/11/20, and saving stores that date and reopens with it',
+	{ meta: { scenario: 'S295' } },
+	async () => {
+		const { name, cookie } = await registered();
+		await post('/diary', carDebt, cookie);
+		const page = await openDebtTab(cookie, 'payments');
+
+		await page.getByLabel('DBT-0001 paid').check();
+		await page.getByLabel('Paid date of DBT-0001').fill('20261120');
+		await page.getByRole('button', { name: 'Save payments' }).click();
+
+		await expect.poll(() => page.getByRole('status').textContent()).toBe('Saved ✓');
+		expect(payments(name)).toEqual([{ month: localDay().slice(0, 7), paid_date: '2026-11-20' }]);
+		await page.reload();
+		expect(await page.getByLabel('Paid date of DBT-0001').inputValue()).toBe('2026/11/20');
+	}
+);
+
+test('unticking DBT-0001 empties its paid date', { meta: { scenario: 'S297' } }, async () => {
+	const { cookie } = await registered();
+	await post('/diary', carDebt, cookie);
+	const page = await openDebtTab(cookie, 'payments');
+	await page.getByLabel('DBT-0001 paid').check();
+
+	await page.getByLabel('DBT-0001 paid').uncheck();
+
+	expect(await page.getByLabel('Paid date of DBT-0001').inputValue()).toBe('');
+});
+
+test('a ticked row with an impossible paid date shows "Please pick a date."', async () => {
+	const { cookie } = await registered();
+	await post('/diary', carDebt, cookie);
+	const page = await openDebtTab(cookie, 'payments');
+
+	await page.getByLabel('DBT-0001 paid').check();
+	await page.getByLabel('Paid date of DBT-0001').fill('20260230');
+	await page.getByRole('button', { name: 'Save payments' }).click();
+
+	await expect.poll(() => page.getByText('Please pick a date.').isVisible()).toBe(true);
+});
+
 test(
 	'a new account reads "No debts yet. Save an additional debt first." on debt payment',
 	{ meta: { scenario: 'S233' } },

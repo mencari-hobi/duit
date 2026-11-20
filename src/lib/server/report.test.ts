@@ -409,6 +409,20 @@ test(
 );
 
 test(
+	'a tick for 2026-11 with the paid date 2026/10/20 counts in 2026/10 and leaves 2026/11 without debt payment',
+	{ meta: { scenario: 'S301' } },
+	() => {
+		saveSettings(db, alice, { currency: 'IDR', startDay: '25' });
+		const car = borrow();
+		savePayments(db, alice, '2026-11', { [`paid-${car}`]: 'on', [`paidDate-${car}`]: '2026/10/20' }, '2026-11-18');
+
+		const { report, value } = snapshot();
+		expect(report.months.slice(-2)).toEqual(['2026/10', '2026/11']);
+		expect([value('Total Debt payment', -2), value('Total Debt payment')]).toEqual([5200000, 0]);
+	}
+);
+
+test(
 	'a tick for 2026-10 saved on 2026/11/18 counts in 2026/11 and leaves 2026/10 without debt payment',
 	{ meta: { scenario: 'S262' } },
 	() => {

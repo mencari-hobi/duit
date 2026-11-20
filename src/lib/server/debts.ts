@@ -147,15 +147,15 @@ export function debtTable(db: Db, userId: number, month: string) {
 	const { startDay } = readSettings(db, userId);
 	const { start, end } = reportingWindow(month, startDay);
 	const [from, to] = [start.toString(), end.toString()];
-	const paid = new Set(
+	const paid = new Map(
 		(
 			db
 				.prepare(
-					`SELECT debt_id AS id FROM diary_debt_payments JOIN diary_debts ON diary_debts.id = debt_id
+					`SELECT debt_id AS id, paid_date FROM diary_debt_payments JOIN diary_debts ON diary_debts.id = debt_id
 					WHERE user_id = ? AND month = ?`
 				)
-				.all(userId, month) as { id: number }[]
-		).map((row) => row.id)
+				.all(userId, month) as { id: number; paid_date: string }[]
+		).map((row) => [row.id, row.paid_date])
 	);
 	const rows = debts
 		.map((debt) => ({ debt, dates: schedule(debt) }))
@@ -171,6 +171,7 @@ export function debtTable(db: Db, userId: number, month: string) {
 	const sum = (pick: (row: (typeof rows)[number]) => number) => rows.reduce((total, row) => total + pick(row), 0);
 	return {
 		rows,
+		paidDates: Object.fromEntries(debts.filter((debt) => paid.has(debt.id)).map((debt) => [debt.code, paid.get(debt.id)!])),
 		total: {
 			total: sum((row) => row.total),
 			due: sum((row) => row.due),
@@ -182,17 +183,23 @@ export function debtTable(db: Db, userId: number, month: string) {
 }
 
 export function savePayments(db: Db, userId: number, month: string, fields: Fields, today: string) {
-	const debts = debtRows(db, userId);
-	let paid = 0;
+	const ticked = debtRows(db, userId).map((debt) => {
+		const typed = fields[`paidDate-${debt.code}`];
+		return { debt, paid: Boolean(fields[`paid-${debt.code}`]), date: typed === undefined ? today : isoDate(typed) };
+	});
+	const refused = ticked.find((row) => row.paid && !row.date);
+	if (refused) return { message: 'Please pick a date.', field: `paidDate-${refused.debt.code}` };
 	db.transaction(() => {
-		for (const debt of debts) {
-			if (fields[`paid-${debt.code}`]) {
-				paid++;
-				db.prepare('INSERT OR IGNORE INTO diary_debt_payments (debt_id, month, paid_date) VALUES (?, ?, ?)').run(debt.id, month, today);
-			} else db.prepare('DELETE FROM diary_debt_payments WHERE debt_id = ? AND month = ?').run(debt.id, month);
+		for (const { debt, paid, date } of ticked) {
+			if (paid)
+				db.prepare(
+					`INSERT INTO diary_debt_payments (debt_id, month, paid_date) VALUES (?, ?, ?)
+					ON CONFLICT (debt_id, month) DO UPDATE SET paid_date = excluded.paid_date`
+				).run(debt.id, month, date);
+			else db.prepare('DELETE FROM diary_debt_payments WHERE debt_id = ? AND month = ?').run(debt.id, month);
 		}
 	})();
-	return { paid };
+	return { paid: ticked.filter((row) => row.paid).length };
 }
 
 export function debtHoldings(db: Db, userId: number, currency: string, startDay: number, today: string) {
