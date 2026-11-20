@@ -183,7 +183,7 @@ test(
 
 test(
 	'the unit field of a cash purchase is wider than its currency picker on a 360 px wide screen',
-	{ meta: { scenario: 'S274' } },
+	{ meta: { scenario: 'S302' } },
 	async () => {
 		const { cookie } = await registered();
 

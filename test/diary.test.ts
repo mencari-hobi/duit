@@ -497,7 +497,7 @@ test(
 
 test(
 	'typing 2.5 into the unit shows "2,5", since a typed dot marks the decimals',
-	{ meta: { scenario: 'S273' } },
+	{ meta: { scenario: 'S303' } },
 	async () => {
 		const { cookie } = await registered();
 		const page = await openAssetTab(cookie);

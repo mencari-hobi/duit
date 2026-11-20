@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Label } from '#lib/components/ui/label/index.js';
+	import { getLocalTimeZone, today } from '@internationalized/date';
 	import { group } from '#lib/amount.ts';
+	import { groupDate, slashDate } from '#lib/date.ts';
 
 	type Row = { code: string; category: string; total: number; due: number; paid: boolean; remaining: number; overdue: number };
-	type Table = { rows: Row[]; total: { total: number; due: number; unpaid: number; remaining: number; overdue: number } } | null;
+	type Table = { rows: Row[]; paidDates: Record<string, string>; total: { total: number; due: number; unpaid: number; remaining: number; overdue: number } } | null;
 
 	type Props = {
 		table: Table;
@@ -12,9 +15,22 @@
 		month: string;
 		currency: string;
 		paid?: boolean;
+		sent?: Record<string, string>;
+		error?: string;
+		invalid?: string;
 	};
 
-	let { table, months, month, currency, paid }: Props = $props();
+	let { table, months, month, currency, paid, sent, error, invalid }: Props = $props();
+
+	const startTicks = (rows: Row[], kept?: Record<string, string>) =>
+		Object.fromEntries(rows.map((row) => [row.code, kept ? Boolean(kept[`paid-${row.code}`]) : row.paid]));
+	const startDates = (rows: Row[], stored: Record<string, string>, kept?: Record<string, string>) =>
+		Object.fromEntries(
+			rows.map((row) => [row.code, kept ? (kept[`paidDate-${row.code}`] ?? '') : stored[row.code] ? slashDate(stored[row.code]) : ''])
+		);
+	let ticks = $state(untrack(() => startTicks(table?.rows ?? [], sent)));
+	let dates = $state(untrack(() => startDates(table?.rows ?? [], table?.paidDates ?? {}, sent)));
+	const tick = (code: string, checked: boolean) => (dates[code] = checked ? slashDate(today(getLocalTimeZone())) : '');
 
 	const shown = (n: number) => group(String(Math.round(n)));
 	const select =
@@ -49,6 +65,7 @@
 						<th scope="col" class={[head, 'text-right']}>Debt &amp; interest amount ({currency})</th>
 						<th scope="col" class={[head, 'text-right']}>Due amount ({currency})</th>
 						<th scope="col" class={[head, 'text-center']}>Paid</th>
+						<th scope="col" class={head}>Paid date</th>
 						<th scope="col" class={[head, 'text-right']}>Remaining debt ({currency})</th>
 						<th scope="col" class={[head, 'pr-4 text-right']}>Overdue ({currency})</th>
 					</tr>
@@ -65,8 +82,24 @@
 									type="checkbox"
 									name="paid-{row.code}"
 									aria-label="{row.code} paid"
-									checked={row.paid}
+									bind:checked={ticks[row.code]}
+									onchange={(event) => tick(row.code, event.currentTarget.checked)}
 									class="size-5 accent-primary"
+								/>
+							</td>
+							<td class="px-2 py-1">
+								<input
+									name="paidDate-{row.code}"
+									aria-label="Paid date of {row.code}"
+									inputmode="numeric"
+									autocomplete="off"
+									placeholder="YYYY/MM/DD"
+									disabled={!ticks[row.code]}
+									bind:value={dates[row.code]}
+									oninput={(event) => (dates[row.code] = groupDate(event.currentTarget.value))}
+									aria-invalid={invalid === `paidDate-${row.code}` || undefined}
+									aria-describedby={invalid === `paidDate-${row.code}` ? 'message' : undefined}
+									class="h-9 w-32 rounded-lg border border-input bg-transparent px-2 text-base tabular-nums outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30"
 								/>
 							</td>
 							<td class={amount}>{shown(row.remaining)}</td>
@@ -80,6 +113,7 @@
 						<td class={amount}>{shown(table.total.total)}</td>
 						<td class={amount}>{shown(table.total.due)}</td>
 						<td class="px-2 py-2 text-center whitespace-nowrap">{table.total.unpaid} unpaid</td>
+						<td></td>
 						<td class={amount}>{shown(table.total.remaining)}</td>
 						<td class={[amount, 'pr-4', table.total.overdue > 0 && 'text-out']}>{shown(table.total.overdue)}</td>
 					</tr>
@@ -92,7 +126,9 @@
 		</p>
 		<div class="flex flex-col gap-2 md:flex-row-reverse md:items-center md:justify-start md:gap-4">
 			<Button type="submit" class="h-11 w-full text-base md:w-auto md:px-8">Save payments</Button>
-			{#if paid}
+			{#if error}
+				<p id="message" role="alert" class="font-semibold text-destructive">{error}</p>
+			{:else if paid}
 				<p id="message" role="status" class="font-semibold text-in">Saved ✓</p>
 			{/if}
 		</div>

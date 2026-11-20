@@ -132,6 +132,16 @@ test('a debt installment ticked paid on a date in the period counts as its due a
 	]).toEqual([5200000, 0]);
 });
 
+test('a paid date set to 2026/10/20 places the installment in a period covering that date', { meta: { scenario: 'S300' } }, () => {
+	saveDebt(db, alice, carDebt);
+	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on', 'paidDate-DBT-0001': '2026/10/20' }, today);
+
+	expect([
+		row('Debt payment', 'Car installment', '2026-10-20', '2026-10-20').actual,
+		section('Debt payment', '2026-10-21', '2026-11-30').actual
+	]).toEqual([5200000, 0]);
+});
+
 test('a plan installment running through the period is the budget, and paying more reads unfavourable', { meta: { scenario: 'S249' } }, () => {
 	saveDebt(db, alice, carDebt);
 	savePayments(db, alice, '2026-11', { 'paid-DBT-0001': 'on' }, '2026-11-18');

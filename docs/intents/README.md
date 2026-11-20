@@ -76,9 +76,9 @@ Every intent behind the work of the project, in the order the definitions record
 - Why: The Spec leaves the remaining debt open, and the user chose to show unpaid installments as overdue and count the debt in net worth
 - Serves: F26, F27, R31, R88, S221, S234, S235, S236
 
-## Intent I19: A Paid tick stores the day of the save as its paid date
-- Why: The Spec needs a paid date so a later Spending Report can place each payment in a period, and the user kept the mockup's table without a date column
-- Serves: R90
+## Intent I19: A Paid tick stores an editable paid date, starting at the day of the tick
+- Why: The Spec needs an editable paid date that places each payment in a report period
+- Serves: R90, R113, R114, S300, S301
 
 ## Intent I20: The Spending Report compares a chosen period of the Diary with the Plan's budget
 - Why: The Spec leaves "Plan vs actual" open, and the Spending Report answers it with a prorated budget, a variance, and the Plan's ratios

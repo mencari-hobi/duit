@@ -156,13 +156,18 @@
 	{/if}
 	{#if type === 'debt'}
 		{#if data.debtView === 'payments'}
-			<DebtPayments
-				table={data.debts}
-				months={data.months}
-				month={data.month}
-				currency={data.settings!.currency}
-				paid={form?.paid}
-			/>
+			{#key data.month}
+				<DebtPayments
+					table={data.debts}
+					months={data.months}
+					month={data.month}
+					currency={data.settings!.currency}
+					paid={form?.paid}
+					sent={form?.error ? form.values : undefined}
+					error={form?.error}
+					invalid={form?.field}
+				/>
+			{/key}
 		{:else}
 			<DebtForm
 				{kept}
