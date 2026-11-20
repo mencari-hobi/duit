@@ -285,7 +285,7 @@ test('debt payment reads DBT-0001 without a paid tick for the current reporting 
 	startDay25();
 	borrow(alice);
 
-	expect(debtTable(db, alice, '2026-11')!.rows).toEqual([
+	expect(debtTable(db, alice, '2026-11')!.rows).toMatchObject([
 		{ code: 'DBT-0001', category: 'Car installment', total: 187200000, due: 5200000, paid: false, remaining: 187200000, overdue: 83200000 }
 	]);
 });
@@ -296,13 +296,51 @@ test('the total row sums the amounts, the remaining debts, and the overdue amoun
 	borrow(alice, { category: 'Mortgage', amount: '900.000.000', tenor: '180', end: '2040/05/25', installment: '6.000.000' });
 	tick('2026-11');
 
-	expect(debtTable(db, alice, '2026-11')!.total).toEqual({
+	expect(debtTable(db, alice, '2026-11')!.total).toMatchObject({
 		total: 187200000 + 1080000000,
 		due: 11200000,
 		unpaid: 1,
 		remaining: 182000000 + 1080000000,
 		overdue: 83200000 + 16 * 6000000
 	});
+});
+
+test('each row gives the payment type of its debt', { meta: { scenario: 'S304' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	expect(debtTable(db, alice, '2026-11')!.rows[0].paymentType).toBe('Monthly');
+});
+
+test('cumulative due sums the installments from the start payment to the end of the chosen month', { meta: { scenario: 'S305' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	expect(debtTable(db, alice, '2026-11')!.rows[0].cumulative).toBe(88400000);
+});
+
+test('a paid tick leaves the cumulative due unchanged', { meta: { scenario: 'S306' } }, () => {
+	startDay25();
+	borrow(alice);
+
+	tick('2026-11');
+
+	expect(debtTable(db, alice, '2026-11')!.rows[0].cumulative).toBe(88400000);
+});
+
+test('the total row sums the cumulative due of every row', { meta: { scenario: 'S307' } }, () => {
+	startDay25();
+	borrow(alice);
+	borrow(alice, { paymentType: 'Weekly', tenor: '12', start: '2026/10/25', end: '2027/09/19', installment: '1.000.000' });
+
+	expect(debtTable(db, alice, '2026-11')!.total.cumulative).toBe(88400000 + 5000000);
+});
+
+test('cumulative due stops at the last payment of the debt', () => {
+	startDay25();
+	borrow(alice, { tenor: '3', start: '2026/09/25', end: '2026/11/25' });
+
+	expect(debtTable(db, alice, '2026-12')!.rows[0].cumulative).toBe(3 * 5200000);
 });
 
 test('ticking DBT-0001 for 2026-11 lowers its remaining debt for 2026-11 by the due amount', { meta: { scenario: 'S232' } }, () => {

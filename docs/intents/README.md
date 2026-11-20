@@ -111,3 +111,7 @@ Every intent behind the work of the project, in the order the definitions record
 ## Intent I27: The Monthly report's "Remaining Amount" tracks the cash the user can spend right now
 - Why: The user reads the cell as spendable cash, so an unrealized move on gold misleads them, while a realized gain is income
 - Serves: R111, R112
+
+## Intent I28: The Debt payment table shows each debt's payment type and cumulative due
+- Why: A row should tell a weekly debt from a monthly one and show how much has fallen due
+- Serves: R115, R116

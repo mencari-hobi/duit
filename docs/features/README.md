@@ -205,6 +205,12 @@ Every feature of the product, grouped by the surface a user reaches it on.
   - Scenario S283: A Paid tick for 2026-11 leaves the remaining debt for 2026-10 at "187.200.000"
 - Rule R109: "Overdue" sums the due amounts of the months before the chosen month that are not ticked Paid
   - Scenario S284: With only 2026-10 ticked, "DBT-0001" from S48 reads "78.000.000" overdue for 2026-11
+- Rule R115: Each row shows the debt's payment type
+  - Scenario S304: "DBT-0001" from S48 reads "Monthly" under "Payment type"
+- Rule R116: Cumulative due sums the installments due from the start payment through the chosen month
+  - Scenario S305: With the reporting start day 25, "DBT-0001" from S48 reads a cumulative due of "88.400.000" for 2026-11 (happy path)
+  - Scenario S306: Ticking "DBT-0001" Paid for 2026-11 leaves its cumulative due at "88.400.000"
+  - Scenario S307: With the reporting start day 25, "DBT-0001" from S48 and the debt from S226 total a cumulative due of "93.400.000" for 2026-11
 - Rule R91: An account without debts reads "No debts yet. Save an additional debt first."
   - Scenario S233: A new account's Debt payment reads "No debts yet. Save an additional debt first."
 
