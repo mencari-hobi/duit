@@ -6,8 +6,8 @@
 	import { group } from '#lib/amount.ts';
 	import { groupDate, slashDate } from '#lib/date.ts';
 
-	type Row = { code: string; category: string; total: number; due: number; paid: boolean; remaining: number; overdue: number };
-	type Table = { rows: Row[]; paidDates: Record<string, string>; total: { total: number; due: number; unpaid: number; remaining: number; overdue: number } } | null;
+	type Row = { code: string; category: string; paymentType: string; total: number; due: number; cumulative: number; paid: boolean; remaining: number; overdue: number };
+	type Table = { rows: Row[]; paidDates: Record<string, string>; total: { total: number; due: number; cumulative: number; unpaid: number; remaining: number; overdue: number } } | null;
 
 	type Props = {
 		table: Table;
@@ -62,8 +62,10 @@
 					<tr class="border-b">
 						<th scope="col" class={[head, 'pl-4']}>Debt code</th>
 						<th scope="col" class={head}>Debt category</th>
+						<th scope="col" class={head}>Payment type</th>
 						<th scope="col" class={[head, 'text-right']}>Debt &amp; interest amount ({currency})</th>
 						<th scope="col" class={[head, 'text-right']}>Due amount ({currency})</th>
+						<th scope="col" class={[head, 'text-right']}>Cumulative due ({currency})</th>
 						<th scope="col" class={[head, 'text-center']}>Paid</th>
 						<th scope="col" class={head}>Paid date</th>
 						<th scope="col" class={[head, 'text-right']}>Remaining debt ({currency})</th>
@@ -75,8 +77,10 @@
 						<tr class="border-b">
 							<th scope="row" class="py-2 pr-2 pl-4 text-left font-medium whitespace-nowrap">{row.code}</th>
 							<td class="px-2 py-2 whitespace-nowrap">{row.category}</td>
+							<td class="px-2 py-2 whitespace-nowrap">{row.paymentType}</td>
 							<td class={amount}>{shown(row.total)}</td>
 							<td class={amount}>{shown(row.due)}</td>
+							<td class={amount}>{shown(row.cumulative)}</td>
 							<td class="px-2 py-1 text-center">
 								<input
 									type="checkbox"
@@ -109,9 +113,10 @@
 				</tbody>
 				<tfoot>
 					<tr class="bg-muted font-semibold">
-						<th scope="row" colspan="2" class="py-2 pl-4 text-left">Total</th>
+						<th scope="row" colspan="3" class="py-2 pl-4 text-left">Total</th>
 						<td class={amount}>{shown(table.total.total)}</td>
 						<td class={amount}>{shown(table.total.due)}</td>
+						<td class={amount}>{shown(table.total.cumulative)}</td>
 						<td class="px-2 py-2 text-center whitespace-nowrap">{table.total.unpaid} unpaid</td>
 						<td></td>
 						<td class={amount}>{shown(table.total.remaining)}</td>
@@ -121,7 +126,8 @@
 			</table>
 		</div>
 		<p class="text-sm text-muted-foreground">
-			Due amount = installments falling in the selected reporting month. Remaining debt = Debt &amp; interest amount −
+			Due amount = installments falling in the selected reporting month. Cumulative due = installments due from the start
+			payment to the end of this month. Remaining debt = Debt &amp; interest amount −
 			the due amounts ticked Paid up to this month. Overdue = due amounts of earlier months not ticked Paid.
 		</p>
 		<div class="flex flex-col gap-2 md:flex-row-reverse md:items-center md:justify-start md:gap-4">

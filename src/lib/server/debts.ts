@@ -163,8 +163,10 @@ export function debtTable(db: Db, userId: number, month: string) {
 		.map(({ debt, dates }) => ({
 			code: debt.code,
 			category: debt.category,
+			paymentType: debt.payment_type,
 			total: totalOf(debt),
 			due: debt.installment * dates.filter((date) => date >= from && date <= to).length,
+			cumulative: debt.installment * dates.filter((date) => date <= to).length,
 			paid: paid.has(debt.id),
 			...standing(debt, month, startDay, paidMonths(db, debt))
 		}));
@@ -175,6 +177,7 @@ export function debtTable(db: Db, userId: number, month: string) {
 		total: {
 			total: sum((row) => row.total),
 			due: sum((row) => row.due),
+			cumulative: sum((row) => row.cumulative),
 			unpaid: rows.filter((row) => !row.paid).length,
 			remaining: sum((row) => row.remaining),
 			overdue: sum((row) => row.overdue)
